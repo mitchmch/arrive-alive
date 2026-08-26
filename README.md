@@ -1,6 +1,6 @@
 # Arrive Alive
 
-Arrive Alive is a responsive road-safety web application for journey recording, live GPS speed monitoring, community hazard reporting, and driver safety feedback. The application runs as a static web app and uses Mapbox GL JS for its map experience.
+Arrive Alive is a responsive road-safety web application for journey recording, live GPS speed monitoring, community hazard reporting, and driver safety feedback. The application runs as a static web app and uses MapLibre GL JS with CARTO vector maps.
 
 ## Features
 
@@ -29,7 +29,7 @@ This version has no build step or backend dependency. It can be served from any 
 
 - A modern browser with JavaScript enabled
 - Node.js 18 or newer for the recommended local server and deployment commands
-- A Mapbox account and public access token for Mapbox-hosted maps
+- Internet access for MapLibre and CARTO map assets
 - HTTPS in production so browser geolocation works reliably
 
 The application should be tested on a real GPS-capable phone before production use. Desktop browsers may provide low-accuracy, delayed, or simulated location readings.
@@ -39,27 +39,11 @@ The application should be tested on a real GPS-capable phone before production u
 ### Clone the repository
 
 ```bash
-git clone https://github.com/GBFBank/arrive_alive_demo.git
-cd arrive_alive_demo
+git clone https://github.com/mitchmch/arrive-alive.git
+cd arrive-alive
 ```
 
-The repository is private, so the GitHub account cloning it must have access.
-
-### Configure Mapbox
-
-Open `index.html` and find the active `MAPBOX_TOKEN` declaration:
-
-```javascript
-const MAPBOX_TOKEN = 'YOUR_PUBLIC_MAPBOX_TOKEN';
-```
-
-Replace the value with a Mapbox public token beginning with `pk.`. Never place a Mapbox secret token beginning with `sk.` in browser code.
-
-If `MAPBOX_TOKEN` is left empty, the application falls back to public CARTO light and dark map styles:
-
-```javascript
-const MAPBOX_TOKEN = '';
-```
+If the repository is private, the GitHub account cloning it must have access.
 
 ### Start the local server
 
@@ -77,26 +61,9 @@ http://127.0.0.1:3000
 
 Do not open `index.html` directly with a `file://` URL. Map resources, browser permissions, and geolocation behave more reliably through an HTTP server.
 
-## Mapbox configuration
+## Map configuration
 
-### Create a public token
-
-1. Sign in to Mapbox.
-2. Open the access-token settings.
-3. Create a public token for the web application.
-4. Enable only the public scopes required to read Mapbox styles, fonts, sprites, and tiles.
-5. Add URL restrictions for the domains that will host the app.
-
-Recommended allowed URLs include:
-
-```text
-http://127.0.0.1:3000/*
-http://localhost:3000/*
-https://your-project.vercel.app/*
-https://your-production-domain.example/*
-```
-
-Add every Vercel preview or production hostname that needs to load the map. A missing hostname restriction commonly causes a blank map or HTTP 401/403 responses.
+The app uses MapLibre GL JS 4.7.1 and tokenless CARTO vector styles. No Mapbox account, browser token, or Vercel environment variable is required.
 
 ### Day and night maps
 
@@ -111,8 +78,8 @@ Map styles are configured in `getMapStyle()`:
 
 ```javascript
 return mapTheme === 'light'
-  ? 'mapbox://styles/mapbox/light-v11'
-  : 'mapbox://styles/mapbox/dark-v11';
+  ? 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
+  : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 ```
 
 Route and hazard layers are restored after every map-style change.
@@ -214,21 +181,20 @@ npx vercel --prod
 
 After deployment:
 
-1. Add the Vercel hostname to the Mapbox token’s allowed URLs.
-2. Open the HTTPS deployment.
-3. Grant precise location permission.
-4. Run the authentication, speed, map-theme, and hazard E2E checklists.
+1. Open the HTTPS deployment.
+2. Grant precise location permission.
+3. Run the authentication, speed, map-theme, and hazard E2E checklists.
 
 ### Vercel Git integration
 
 The repository can also be imported from GitHub in Vercel:
 
 1. Create a new Vercel project.
-2. Import `GBFBank/arrive_alive_demo`.
+2. Import `mitchmch/arrive-alive`.
 3. Select the default static configuration.
 4. Leave the build command empty.
 5. Set the output directory to the repository root.
-6. Deploy and add the resulting hostname to the Mapbox token restrictions.
+6. Deploy and test the resulting HTTPS hostname on a physical phone.
 
 Future pushes to the configured production branch can then trigger automatic deployments.
 
@@ -253,10 +219,10 @@ Run the relevant E2E flows before every production deployment.
 
 ### The map is blank
 
-- Check the browser console for Mapbox 401 or 403 responses.
-- Confirm the token starts with `pk.`.
-- Confirm the deployment hostname is allowed by the token.
-- Confirm Mapbox GL JS and its stylesheet can load from `api.mapbox.com`.
+- Confirm MapLibre GL JS and its stylesheet can load from `unpkg.com`.
+- Confirm CARTO style, font, sprite, and tile requests can load from `basemaps.cartocdn.com`.
+- Check whether a content blocker, restrictive network, VPN, or browser privacy setting is blocking map resources.
+- Use the on-screen retry control after connectivity returns.
 
 ### Location or speed does not update
 
@@ -275,11 +241,9 @@ Run the relevant E2E flows before every production deployment.
 
 ### Route disappears after switching themes
 
-Reload the latest version of the application and clear any stale site cache. The current implementation restores route and hazard layers after Mapbox completes each style transition.
+Reload the latest version of the application and clear any stale site cache. The current implementation restores route and hazard layers after MapLibre completes each style transition.
 
 ## Security notes
 
-- Browser-side Mapbox tokens are public by design. Protect them with minimal scopes and URL restrictions.
-- Never commit Mapbox secret tokens, API secrets, passwords, or private keys.
+- Never commit API secrets, passwords, private keys, or service-account credentials.
 - The current static demo stores application data in browser-managed client state. A production multi-user release should use authenticated backend APIs and a durable database for accounts, incidents, confirmations, journeys, and audit records.
-
