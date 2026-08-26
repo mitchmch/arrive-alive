@@ -2,7 +2,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 
 /// Local SQLite database for offline-first caching.
-/// Tables: journeys, violations, incidents, agencies, cached_routes, sync_queue
+/// Tables: journeys, speed_samples, violations, incidents, agencies,
+/// cached_routes, sync_queue
 class LocalDatabase {
   static final LocalDatabase _instance = LocalDatabase._();
   factory LocalDatabase() => _instance;
@@ -22,7 +23,7 @@ class LocalDatabase {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: (db, version) async {
         // Journeys table — localId is primary, remoteId is the server-assigned ID
         await db.execute('''
@@ -67,12 +68,17 @@ class LocalDatabase {
             lat REAL NOT NULL,
             lng REAL NOT NULL,
             reportCount INTEGER DEFAULT 1,
+            episodeStartedAt TEXT,
+            episodeEndedAt TEXT,
+            sampleCount INTEGER DEFAULT 1,
             timestamp TEXT NOT NULL,
             synced INTEGER DEFAULT 0,
             updatedAt TEXT,
             version INTEGER DEFAULT 1
           )
         ''');
+
+        await _createSpeedSamplesTable(db);
 
         // Incidents table — cached from server for offline viewing
         await db.execute('''
@@ -153,6 +159,10 @@ class LocalDatabase {
           'CREATE INDEX idx_violations_journey ON violations(journeyLocalId)',
         );
         await db.execute(
+          'CREATE INDEX idx_speed_samples_journey '
+          'ON speed_samples(journeyLocalId, recordedAt)',
+        );
+        await db.execute(
           'CREATE INDEX idx_incidents_cached ON incidents(cachedAt)',
         );
         await db.execute(
@@ -205,8 +215,43 @@ class LocalDatabase {
             'ON sync_queue(operationId)',
           );
         }
+        if (oldVersion < 4) {
+          await db.execute(
+            'ALTER TABLE violations ADD COLUMN episodeStartedAt TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE violations ADD COLUMN episodeEndedAt TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE violations ADD COLUMN sampleCount INTEGER DEFAULT 1',
+          );
+          await _createSpeedSamplesTable(db);
+          await db.execute(
+            'CREATE INDEX idx_speed_samples_journey '
+            'ON speed_samples(journeyLocalId, recordedAt)',
+          );
+        }
       },
     );
+  }
+
+  static Future<void> _createSpeedSamplesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS speed_samples (
+        localId TEXT PRIMARY KEY,
+        remoteId INTEGER,
+        journeyLocalId TEXT NOT NULL,
+        journeyRemoteId INTEGER,
+        recordedAt TEXT NOT NULL,
+        speed REAL NOT NULL,
+        speedLimit REAL NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        accuracy REAL NOT NULL,
+        isMoving INTEGER NOT NULL,
+        synced INTEGER DEFAULT 0
+      )
+    ''');
   }
 
   // === Journeys ===
@@ -259,6 +304,60 @@ class LocalDatabase {
   }
 
   // === Violations ===
+
+  Future<String> insertSpeedSample(Map<String, dynamic> sample) async {
+    final db = await database;
+    final localId = sample['localId'] as String;
+    await db.insert(
+      'speed_samples',
+      sample,
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+    return localId;
+  }
+
+  Future<void> updateSpeedSample(
+    String localId,
+    Map<String, dynamic> updates,
+  ) async {
+    final db = await database;
+    await db.update(
+      'speed_samples',
+      updates,
+      where: 'localId = ?',
+      whereArgs: [localId],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getJourneySpeedSamples(
+    String journeyLocalId,
+  ) async {
+    final db = await database;
+    return db.query(
+      'speed_samples',
+      where: 'journeyLocalId = ?',
+      whereArgs: [journeyLocalId],
+      orderBy: 'recordedAt ASC',
+    );
+  }
+
+  Future<void> markJourneyEvidenceSynced(String journeyLocalId) async {
+    final db = await database;
+    final batch = db.batch();
+    batch.update(
+      'speed_samples',
+      {'synced': 1},
+      where: 'journeyLocalId = ?',
+      whereArgs: [journeyLocalId],
+    );
+    batch.update(
+      'violations',
+      {'synced': 1},
+      where: 'journeyLocalId = ?',
+      whereArgs: [journeyLocalId],
+    );
+    await batch.commit(noResult: true);
+  }
 
   Future<String> insertViolation(Map<String, dynamic> violation) async {
     final db = await database;

@@ -12,6 +12,8 @@ import '../controllers/journey_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/navigation_controller.dart';
 import '../controllers/hazard_controller.dart';
+import '../controllers/agency_notice_controller.dart';
+import '../models/agency_notice.dart';
 import '../models/incident.dart';
 import '../services/location_service.dart';
 import '../services/tts_service.dart';
@@ -25,6 +27,7 @@ import 'report_screen.dart';
 import 'scoreboard_screen.dart';
 import 'profile_screen.dart';
 import 'travel_flow_screen.dart';
+import 'journey_evidence_summary_screen.dart';
 
 class JourneyScreen extends ConsumerStatefulWidget {
   const JourneyScreen({super.key});
@@ -61,6 +64,62 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
     // Guests start the same polling lifecycle as registered users.
     ref.read(hazardProvider.notifier).startPolling();
     _initLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showAgencyNotices());
+  }
+
+  Future<void> _showAgencyNotices() async {
+    final user = ref.read(authProvider).user;
+    if (user == null || user.isGuest) return;
+    try {
+      final notices =
+          await ref.read(unseenAgencyNoticesProvider(user.id).future);
+      for (final notice in notices) {
+        if (!mounted) return;
+        final avoid = notice.classification == AgencyClassification.avoid;
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            icon: Icon(
+              avoid ? Icons.warning_amber_rounded : Icons.verified_outlined,
+              color: avoid ? AppTheme.destructive : AppTheme.primary,
+            ),
+            title: Text(avoid ? 'Agency to avoid' : 'Trusted agency'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  notice.agencyName,
+                  style: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
+                ),
+                if (notice.summaryText.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(notice.summaryText),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  'Classification is set from reviewed evidence. Any AI '
+                  'summary above is display text only.',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        );
+        await ref.read(agencyNoticeServiceProvider).markSeen(user.id, notice);
+      }
+    } catch (_) {
+      // Notices are supplementary and must never block an offline journey.
+    }
   }
 
   Future<void> _initLocation() async {
@@ -273,19 +332,41 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
     if (_isEndingJourney) return;
     setState(() => _isEndingJourney = true);
     try {
-      await ref.read(journeyProvider.notifier).stopRecording();
+      final summary = await ref.read(journeyProvider.notifier).stopRecording();
       if (!mounted) return;
       final auth = ref.read(authProvider);
-      if (AccessPolicy.canAccessScoreboard(auth.user)) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ScoreboardScreen()),
-        );
-      } else {
-        setState(() => _isEndingJourney = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Journey saved')));
-      }
+      final canOpenBoard = AccessPolicy.canAccessScoreboard(auth.user);
+      final navigator = Navigator.of(context);
+      final authNotifier = ref.read(authProvider.notifier);
+      navigator.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => JourneyEvidenceSummaryScreen(
+            summary: summary,
+            canOpenSpeedBoard: canOpenBoard,
+            onOpenSpeedBoard: canOpenBoard
+                ? () => navigator.pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => const ScoreboardScreen(),
+                      ),
+                    )
+                : null,
+            onDone: () {
+              if (auth.user?.isGuest ?? false) {
+                authNotifier.logout();
+                navigator.pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const AccessScreen()),
+                  (_) => false,
+                );
+              } else {
+                navigator.pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const TravelFlowScreen()),
+                  (_) => false,
+                );
+              }
+            },
+          ),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _isEndingJourney = false);
@@ -337,7 +418,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
       }
     });
 
-    final limit = AppConfig.speedLimits[journey.mode] ?? 90;
+    final limit = journey.speedLimit;
 
     return PopScope(
       canPop: _allowPop || !journey.isRecording,

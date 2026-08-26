@@ -721,6 +721,14 @@ ul{list-style:none}
 .violation-metric strong{display:block;font-size:13px;white-space:nowrap}
 .violation-detail{display:grid;grid-template-columns:1fr;gap:3px;font-size:12px;color:var(--aa-text-muted)}
 .violation-detail strong{color:var(--aa-text);font-weight:700}
+.safety-feed{padding:12px 20px 0}
+.safety-feed[hidden]{display:none}
+.safety-feed h2{font-size:14px;margin-bottom:8px}
+.safety-notice{width:100%;padding:12px;margin-bottom:8px;text-align:left;background:var(--aa-card);border:1px solid var(--aa-border);border-radius:10px}
+.safety-notice strong,.safety-notice span{display:block}
+.safety-notice strong{font-size:13px}
+.safety-notice span{font-size:12px;color:var(--aa-text-muted);margin-top:3px}
+.evidence-note{padding:10px 20px;color:var(--aa-text-muted);font-size:12px;line-height:1.45}
 
 /* ===== REPORT ===== */
 .report-body{padding:16px 20px 40px}
@@ -1679,7 +1687,9 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
       <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-violations" onclick="switchTab(this,'tab-violations')" data-testid="tab-speeding-vehicles">Speeding vehicles</button>
     </div>
     <div class="screen-scroll">
-      <div id="tab-agencies" role="tabpanel"><div class="board-intro"><strong>Agency safety scores</strong><span>100-score agencies are marked as trusted.</span></div><div class="rank-list" id="rankList"></div></div>
+      <section class="safety-feed" id="safetyNotificationFeed" hidden aria-labelledby="safetyNotificationsTitle"><h2 id="safetyNotificationsTitle">Safety updates</h2><div id="safetyNotificationList"></div></section>
+      <p class="evidence-note">Trusted and avoid labels are rule-based. Agencies without minimum independent evidence remain unclassified.</p>
+      <div id="tab-agencies" role="tabpanel"><div class="board-intro"><strong>Evidence-based agency status</strong><span>Daily, weekly and monthly results show confidence and reasons.</span></div><div class="rank-list" id="rankList"></div></div>
       <div id="tab-violations" role="tabpanel" style="display:none"><div class="violation-list" id="violationList"></div></div>
     </div>
   </div>
@@ -1720,6 +1730,18 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
         <div class="section-label">Vehicle Plate</div>
         <div class="form-group" style="padding:0;margin:0">
           <input class="form-input" id="reportPlate" placeholder="e.g. NW 1234 AB" style="text-transform:uppercase">
+        </div>
+        <div id="speedReportEvidence" hidden>
+          <div class="section-label" style="margin-top:16px">Speed evidence</div>
+          <div class="form-group" style="padding:0;margin:0 0 12px">
+            <label class="form-label" for="reportAgency">Travel agency</label>
+            <select class="form-select" id="reportAgency" data-testid="select-report-agency"></select>
+          </div>
+          <div class="form-group" style="padding:0;margin:0">
+            <label class="form-label" for="reportSpeed">Observed speed (km/h)</label>
+            <input class="form-input" id="reportSpeed" type="number" inputmode="decimal" min="1" max="300" step="1" placeholder="e.g. 92" data-testid="input-reported-speed">
+            <div class="form-help">Your report can corroborate recorded telemetry, but it cannot create or change a violation by itself.</div>
+          </div>
         </div>
         <div class="section-label" style="margin-top:16px">Description</div>
         <textarea class="text-field" id="reportDesc" placeholder="Describe what you observed..."></textarea>
@@ -1936,9 +1958,9 @@ function setAASession(s){
   try{if(aaSession)window.sessionStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(aaSession));else window.sessionStorage.removeItem(SESSION_STORAGE_KEY)}catch(_){}
   updateAuthenticatedControls()
 }
-async function callAppApi(path,{method='GET',body,token}={}){
+async function callAppApi(path,{method='GET',body,token,idempotencyKey}={}){
   if(!APP_API_URL)throw new Error('Durable API is not configured');
-  const response=await fetch(`${APP_API_URL}${path}`,{method,headers:{'Accept':'application/json',...(body?{'Content-Type':'application/json'}:{}),...(token?{'Authorization':`Bearer ${token}`}:{})},body:body?JSON.stringify(body):undefined});
+  const response=await fetch(`${APP_API_URL}${path}`,{method,headers:{'Accept':'application/json',...(body?{'Content-Type':'application/json'}:{}),...(token?{'Authorization':`Bearer ${token}`}:{}),...(idempotencyKey?{'Idempotency-Key':idempotencyKey}:{})},body:body?JSON.stringify(body):undefined});
   let payload={};try{payload=await response.json()}catch(_){}
   if(!response.ok)throw new Error(payload.error||`API returned ${response.status}`);
   return payload;
@@ -2022,7 +2044,7 @@ async function doLogin(){
       if(user.pin!==pin)throw new Error('Incorrect PIN. Please try again.');
       setAASession({name:user.name,phone:user.phone,role:user.role||'user'});
     }
-    showToast('Welcome back, '+getAASession().name);afterAuth();
+    showToast('Welcome back, '+getAASession().name);afterAuth();loadSafetyNotifications();
   }catch(error){errEl.textContent=error.message;errEl.classList.add('show');}
 }
 
@@ -2370,16 +2392,16 @@ function resetAdminSpeedLimits(){
   queueSync();
 }
 
-let wizStep=0, journey={mode:'car',limit:70,vehicleType:'Saloon',reg:'',colour:'',driver:'Guest',passengers:1,assets:[],defects:[]};
+let wizStep=0, journey={mode:'car',limit:70,vehicleType:'Saloon',reg:'',colour:'',driver:'Guest',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
 
 function startGuest(){
   setAASession(null);
-  wizStep=0;journey={mode:'car',limit:70,vehicleType:'Saloon',reg:'',colour:'',driver:'Guest',passengers:1,assets:[],defects:[]};
+  wizStep=0;journey={mode:'car',limit:70,vehicleType:'Saloon',reg:'',colour:'',driver:'Guest',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
   navigate('wizard');renderWiz();
 }
 function startNewJourneySetup(){
   wizStep=0;
-  journey={...journey,reg:'',colour:'',passengers:1,assets:[],defects:[]};
+  journey={...journey,reg:'',colour:'',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
   resetNavigation('wizard');
   renderWiz();
 }
@@ -2406,6 +2428,12 @@ function renderWiz(){
         <select class="form-select" onchange="journey.vehicleType=this.value">
           ${VEHICLE_TYPES[journey.mode].map(t=>`<option ${t===journey.vehicleType?'selected':''}>${t}</option>`).join('')}
         </select></div>
+      <div class="form-group"><label class="form-label">Travel agency <span class="optional-label">Optional</span></label>
+        <select class="form-select" onchange="selectJourneyAgency(this.value)" data-testid="select-journey-agency">
+          <option value="">Independent or private vehicle</option>
+          ${availableAgencyOptions().map(a=>`<option value="${a.id}" ${String(journey.agencyId||'')===String(a.id)?'selected':''}>${escapeHTML(a.name)}</option>`).join('')}
+        </select>
+        <div class="form-help">Choose an agency only when this vehicle operates for it.</div></div>
       <div class="form-group"><label class="form-label">Registration plate</label>
         <input class="form-input" placeholder="e.g. NW 1234 AB" value="${escapeHTML(journey.reg)}" oninput="journey.reg=this.value.toUpperCase()" style="text-transform:uppercase"></div>
       <div class="form-group"><label class="form-label">Colour</label>
@@ -2429,6 +2457,16 @@ function renderWiz(){
       <span class="check-emoji">${['🪞','🛞','💡','📱','⚖️','💨'][i]}</span><span class="check-label">${d}</span></div>`).join('')}</div>
       <div style="padding:16px 20px"><button class="wiz-skip" onclick="finishWizard()">Skip & Start</button></div>`;
   }
+}
+function availableAgencyOptions(){
+  return AGENCIES.map(agency=>({id:Number(agency.remoteId??agency.id),name:String(agency.name||'').trim()}))
+    .filter(agency=>Number.isInteger(agency.id)&&agency.id>0&&agency.name)
+    .sort((a,b)=>a.name.localeCompare(b.name));
+}
+function selectJourneyAgency(value){
+  const agency=availableAgencyOptions().find(item=>String(item.id)===String(value));
+  journey.agencyId=agency?.id||null;
+  journey.agencyName=agency?.name||'';
 }
 function selectMode(id){journey.mode=id;journey.limit=getAdminSpeedLimit(id);journey.vehicleType=VEHICLE_TYPES[id][0];renderWiz();}
 function stepper(d){journey.passengers=Math.max(1,Math.min(50,journey.passengers+d));$('pax').textContent=journey.passengers;}
@@ -3153,8 +3191,8 @@ function handleGpsPosition(position){
   lastGeoFix=fix;
   speedSamples.push({
     timestamp:new Date(timestamp).toISOString(),
-    speedKmh:Math.round(liveSpeed*10)/10,
-    moving:isMoving,
+    speedKph:Math.round(liveSpeed*10)/10,
+    isMoving,
     accuracyM:Math.round(accuracy),
     latitude:Number(fix.lat.toFixed(6)),
     longitude:Number(fix.lng.toFixed(6))
@@ -3562,7 +3600,7 @@ function toggleRecord(){
 
 function toggleSheet(){$('bottomSheet').classList.toggle('expanded');}
 
-function endJourney(message='Journey saved'){
+async function endJourney(message='Journey saved'){
   const session=getAASession();
   lastJourneyReport={
     id:ArriveAliveRepository.normaliseRecord({},'journeys').id,
@@ -3570,7 +3608,9 @@ function endJourney(message='Journey saved'){
     endedAt:new Date().toISOString(),
     driver:journey.driver,
     mode:journey.mode,
-    vehicle:journey.vehicle,
+    agencyId:journey.agencyId,
+    agencyName:journey.agencyName,
+    vehicle:{type:journey.vehicleType,reg:journey.reg,colour:journey.colour,agency:journey.agencyName},
     summary:{
       distanceKm:Number(distKm.toFixed(3)),
       durationSeconds:Math.round(durSec),
@@ -3582,7 +3622,25 @@ function endJourney(message='Journey saved'){
   };
   window.__lastJourneyReport=lastJourneyReport;
   if(session)aaRepository.upsert('journeys',lastJourneyReport);
-  if(session)queueSync();
+  if(session&&APP_API_URL&&session.token){
+    try{
+      const published=await callAppApi('/api/journeys/complete-safety',{
+        method:'POST',token:session.token,idempotencyKey:`safety:${lastJourneyReport.id}`,
+        body:{journey:{
+          stableId:lastJourneyReport.id,mode:journey.mode==='bike'?'motorbike':journey.mode,agencyId:journey.agencyId,
+          vehicleDetails:journey.vehicle||{reg:journey.reg},driverName:journey.driver,
+          endTime:lastJourneyReport.endedAt,distance:lastJourneyReport.summary.distanceKm,
+          maxSpeed:lastJourneyReport.summary.maximumSpeedKmh,averageSpeed:lastJourneyReport.summary.averageSpeedKmh,
+        },samples:lastJourneyReport.samples}
+      });
+      lastJourneyReport.safetyAssessment=published.assessment;
+      message=published.assessment?.resultType==='violator'?'Journey published to Speed Board: sustained speeding detected':'Journey published to Speed Board: within limit';
+    }catch(error){
+      console.warn('Safety publishing is queued for retry:',error);
+      message='Journey saved locally; safety publishing will retry when the service is available';
+      queueSync();
+    }
+  }else if(session)queueSync();
   journeyActive=false;stopMotionTracking();
   liveSpeed=0;
   $('flashOverlay').classList.remove('active');wasViolating=false;
@@ -3610,28 +3668,8 @@ function endJourney(message='Journey saved'){
 /* ============================================================
    PROFILE + SPEED BOARD
    ============================================================ */
-let AGENCIES=[
-  {id:'agency-amour-mezam',name:'Amour Mezam',region:'Bamenda — NW',score:70,violations:18},
-  {id:'agency-budem',name:'Budem',region:'Bamenda — NW',score:85,violations:9},
-  {id:'agency-guarantee',name:'Guarantee Express',region:'Yaoundé — CE',score:85,violations:9},
-  {id:'agency-meta',name:'Meta Express',region:'Bamenda — NW',score:85,violations:7},
-  {id:'agency-touristique',name:'Touristique Express',region:'Yaoundé — CE',score:100,violations:0},
-  {id:'agency-general',name:'General Express',region:'Douala — LT',score:100,violations:0},
-  {id:'agency-a',name:'Agency A',region:'Bafoussam — W',score:100,violations:0},
-  {id:'agency-b',name:'Agency B',region:'Garoua — N',score:100,violations:0},
-  {id:'agency-c',name:'Agency C',region:'Buea — SW',score:100,violations:0},
-  {id:'agency-d',name:'Agency D',region:'Kribi — S',score:100,violations:0}
-];
-const VIOLATIONS=[
-  {plate:'NW 1234 AB',agency:'Amour Mezam',mode:'bus',speed:112,limit:90,where:'N1 near Bafoussam',when:'Today, 08:14'},
-  {plate:'LT 5678 CD',agency:'Guarantee Express',mode:'bus',speed:98,limit:80,where:'N3 near Edéa',when:'Today, 09:02'},
-  {plate:'CE 9012 EF',agency:'Budem',mode:'lorry',speed:95,limit:80,where:'N4 near Bamenda',when:'Yesterday, 18:40'},
-  {plate:'NW 3456 GH',agency:'Meta Express',mode:'car',speed:62,limit:50,where:'Bamenda city',when:'Yesterday, 14:22'},
-  {plate:'SW 7890 IJ',agency:'Touristique Express',mode:'motorbike',speed:88,limit:70,where:'N5 near Kumba',when:'2 days ago'},
-  {plate:'LT 2345 KL',agency:'General Express',mode:'lorry',speed:105,limit:80,where:'Douala — Yaoundé',when:'2 days ago'},
-  {plate:'NW 6789 MN',agency:'Amour Mezam',mode:'car',speed:74,limit:50,where:'Bamenda ring road',when:'3 days ago'},
-  {plate:'CE 0123 OP',agency:'Budem',mode:'bus',speed:102,limit:80,where:'Yaoundé — Bafoussam',when:'3 days ago'}
-];
+let AGENCIES=[];
+let VIOLATIONS=[];
 
 function getProfileInitials(name){
   return String(name||'Account').trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'AA';
@@ -3772,30 +3810,95 @@ async function saveProfile(){
   showToast('Profile updated');
 }
 
+async function loadSafetyNotifications(){
+  const session=getAASession();
+  if(!APP_API_URL||!session?.token)return;
+  try{
+    const items=await callAppApi('/api/notifications',{token:session.token});
+    const unread=items.filter(item=>!item.readAt);
+    const feed=$('safetyNotificationFeed'),list=$('safetyNotificationList');
+    feed.hidden=!items.length;
+    list.innerHTML=items.map(item=>`<button type="button" class="safety-notice" onclick="markSafetyNotificationRead('${escapeHTML(item.id)}',this)" data-testid="notification-${escapeHTML(item.id)}"><strong>${escapeHTML(item.title)}</strong><span>${escapeHTML(item.body)}</span></button>`).join('');
+    if(unread.length&&!window.__safetyPopupShown){window.__safetyPopupShown=true;showToast(unread[0].title);}
+  }catch(error){console.warn('Notification feed unavailable:',error);}
+}
+async function markSafetyNotificationRead(id,element){
+  const session=getAASession();if(!session?.token)return;
+  try{await callAppApi(`/api/notifications/${id}/read`,{method:'PATCH',body:{},token:session.token});element.remove();if(!$('safetyNotificationList').children.length)$('safetyNotificationFeed').hidden=true;}catch(error){showToast('Could not update notification');}
+}
+async function loadSpeedBoardEvidence(){
+  const session=getAASession();
+  if(!APP_API_URL||!session?.token)return;
+  try{
+    const [entries,rollups,agencies]=await Promise.all([
+      callAppApi('/api/speed-board',{token:session.token}),
+      callAppApi('/api/agency-safety-rollups',{token:session.token}),
+      callAppApi('/api/agencies',{token:session.token}),
+    ]);
+    const latest=new Map();
+    const periodPriority={daily:3,weekly:2,monthly:1};
+    rollups.forEach(item=>{
+      const key=String(item.agencyId),current=latest.get(key);
+      const newer=Date.parse(item.periodStart||0)>Date.parse(current?.periodStart||0);
+      if(!current||periodPriority[item.period]>periodPriority[current.period]||(item.period===current.period&&newer))latest.set(key,item);
+    });
+    AGENCIES=agencies.map(agency=>{
+      const id=agency.id??agency.remoteId??agency.stableId;
+      const item=latest.get(String(id));
+      return {
+        ...agency,
+        id,
+        name:agency.name||item?.agencies?.name||'Agency',
+        region:agency.region||item?.agencies?.region||'Region not specified',
+        score:item?Math.round(Number(item.confidence||0)*100):0,
+        violations:Number(item?.violationEpisodeCount||0),
+        status:item?.status||'insufficient_evidence',
+        reasons:item?.reasons||['Minimum journey, user and duration thresholds not yet met'],
+        period:item?.period||'latest',
+        periodStart:item?.periodStart||null,
+      };
+    });
+    VIOLATIONS=entries.filter(item=>item.resultType==='violator').map(item=>{
+      const evidence=item.evidence||{};
+      return {plate:item.journeys?.vehicleReg||'Vehicle withheld',agency:item.agencies?.name||'Independent journey',mode:item.journeys?.mode||'car',speed:Number(evidence.peakSpeedKph||0),limit:Number(evidence.speedLimitKph||0),where:item.summary||'Deterministic journey assessment',when:new Date(item.publishedAt).toLocaleString(),duration:Number(evidence.durationSeconds||0),samples:Number(evidence.sampleCount||0),resultType:item.resultType};
+    });
+    renderSpeedBoardRows();
+  }catch(error){
+    $('rankList').innerHTML='<div class="empty-state compact">Verified evidence is temporarily unavailable. Try again shortly.</div>';
+    $('violationList').innerHTML='<div class="empty-state compact">Speed Board could not be refreshed.</div>';
+  }
+}
 function renderSpeedBoard(){
+  renderSpeedBoardRows();
+  loadSafetyNotifications();
+  loadSpeedBoardEvidence();
+}
+function renderSpeedBoardRows(){
   const list=$('rankList');
   const sorted=[...AGENCIES].sort((a,b)=>b.score-a.score);
+  if(!sorted.length)list.innerHTML='<div class="empty-state compact">No agency has enough verified evidence yet. Status appears after minimum journey, user and duration thresholds are met.</div>';
+  else
   list.innerHTML=sorted.map((a,i)=>{
-    const perfect=a.score===100;
-    return `<div class="rank-row ${perfect?'perfect':''}" data-testid="agency-row-${i}">
+    const trusted=a.status==='trusted',avoid=a.status==='avoid';
+    return `<div class="rank-row ${trusted?'perfect':''}" data-testid="agency-row-${i}">
       <div class="rank-pos">${i+1}</div>
-      <div class="rank-info"><div class="rank-name">${a.name}</div><div class="rank-meta">${a.region} · ${a.violations} violations</div></div>
-      <div class="rank-score"><strong>${a.score}</strong><span class="${perfect?'trusted-mark':''}">${perfect?'✓ Trusted':'Safety score'}</span></div>
+      <div class="rank-info"><div class="rank-name">${escapeHTML(a.name)}</div><div class="rank-meta">${escapeHTML(a.region)} · ${escapeHTML(a.period||'latest')} review · ${a.violations} episodes · ${escapeHTML((a.reasons||[])[0]||'Evidence review')}</div></div>
+      <div class="rank-score"><strong>${a.score}%</strong><span class="${trusted?'trusted-mark':''}">${trusted?'Trusted':avoid?'Avoid':'Insufficient evidence'}</span></div>
     </div>`;
   }).join('');
   renderSpeedingVehicles();
 }
 function renderSpeedingVehicles(){
-  $('violationList').innerHTML=VIOLATIONS.map(v=>`
+  $('violationList').innerHTML=VIOLATIONS.length?VIOLATIONS.map(v=>`
     <div class="violation-card" data-testid="speeding-vehicle-${v.plate.replace(/\s+/g,'-')}">
-      <div class="violation-top"><span class="violation-plate">${v.plate}</span><span class="violation-over">+${v.speed-v.limit} km/h</span></div>
+      <div class="violation-top"><span class="violation-plate">${escapeHTML(v.plate)}</span><span class="violation-over">+${Math.max(0,v.speed-v.limit).toFixed(1)} km/h</span></div>
       <div class="violation-metrics">
         <div class="violation-metric"><span>Measured</span><strong>${v.speed} km/h</strong></div>
         <div class="violation-metric"><span>Limit</span><strong>${v.limit} km/h</strong></div>
-        <div class="violation-metric"><span>Over by</span><strong>${v.speed-v.limit} km/h</strong></div>
+        <div class="violation-metric"><span>Over by</span><strong>${Math.max(0,v.speed-v.limit).toFixed(1)} km/h</strong></div>
       </div>
-      <div class="violation-detail"><span><strong>Agency:</strong> ${v.agency}</span><span><strong>Route:</strong> ${v.where}</span><span><strong>Time:</strong> ${v.when}</span></div>
-    </div>`).join('');
+      <div class="violation-detail"><span><strong>Agency:</strong> ${escapeHTML(v.agency)}</span><span><strong>Assessment:</strong> ${escapeHTML(v.where)}</span><span><strong>Published:</strong> ${escapeHTML(v.when)}</span></div>
+    </div>`).join(''):'<div class="empty-state compact">No automatically verified speeding journeys have been published.</div>';
 }
 function switchTab(btn,tabId){
   document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false')});
@@ -3834,7 +3937,7 @@ function agencySnapshot(agency){
   const vehicles=breakdown.reduce((sum,item)=>sum+item.vehicleCount,0);
   return{
     reportVersion:1,generatedAt:new Date().toISOString(),
-    agency:{id:String(agency.id),name:agency.name,region:agency.region||'Not specified',safetyScore:Number(agency.score)||0,trusted:Number(agency.score)===100},
+    agency:{id:String(agency.id),name:agency.name,region:agency.region||'Not specified',safetyScore:Number(agency.score)||0,trusted:agency.status==='trusted'},
     metrics:{vehicles,journeys:journeys.length,violations:violations.length,safetyScore:Number(agency.score)||0},
     vehicleBreakdown:breakdown.map(item=>({mode:item.mode,vehicles:item.vehicleCount,journeys:item.journeys.length,violations:item.violations.length,maxSpeed:Number(item.maxSpeed.toFixed(1)),averageSpeed:Number(item.averageSpeed.toFixed(1)),speedLimit:item.limit})),
     journeys:journeys.slice(0,100).map(item=>({id:String(item.id),mode:item.mode||'car',endedAt:item.endedAt||item.endTime||item.updatedAt||null,distanceKm:Number(item.summary?.distanceKm||item.distance||0),maxSpeed:Number(journeyValue(item,'maximumSpeedKmh',0).toFixed(1)),averageSpeed:Number(journeyValue(item,'averageSpeedKmh',0).toFixed(1)),violations:journeyValue(item,'violations',0)})),
@@ -3871,13 +3974,13 @@ function renderAdminAgencies(){
   if(!AGENCIES.length){$('adminAgencies').innerHTML='<div class="empty-state compact">Add an agency to begin.</div>';$('adminAgencyReport').innerHTML='<div class="empty-state">Agency reports appear here.</div>';return;}
   if(!AGENCIES.some(item=>String(item.id)===String(selectedAdminAgencyId)))selectedAdminAgencyId=String(AGENCIES[0].id);
   const agency=AGENCIES.find(item=>String(item.id)===String(selectedAdminAgencyId))||AGENCIES[0];
-  $('adminAgencies').innerHTML=AGENCIES.map(item=>`<button type="button" class="${String(item.id)===String(agency.id)?'active':''}" onclick="selectAdminAgency('${escapeHTML(String(item.id))}')" data-testid="admin-agency-${escapeHTML(String(item.id))}">${escapeHTML(item.name)}<span>${Number(item.score)||0} score · ${item.score===100?'Trusted':'Standard'}</span></button>`).join('');
+  $('adminAgencies').innerHTML=AGENCIES.map(item=>`<button type="button" class="${String(item.id)===String(agency.id)?'active':''}" onclick="selectAdminAgency('${escapeHTML(String(item.id))}')" data-testid="admin-agency-${escapeHTML(String(item.id))}">${escapeHTML(item.name)}<span>${Number(item.score)||0} confidence · ${item.status==='trusted'?'Trusted':item.status==='avoid'?'Avoid':'Under review'}</span></button>`).join('');
   const snapshot=agencySnapshot(agency);
   $('adminAgencyReport').innerHTML=`
     <div class="agency-report-head">
       <div><h3 data-testid="agency-report-title">${escapeHTML(agency.name)}</h3><p>${escapeHTML(agency.region||'Region not specified')} · <span class="${snapshot.agency.trusted?'trusted-status':''}">${snapshot.agency.trusted?'Trusted operator':'Standard operator'}</span></p></div>
       <div class="agency-actions">
-        <button type="button" class="admin-button" onclick="toggleAgencyTrusted('${escapeHTML(String(agency.id))}')" data-testid="button-agency-trust">${snapshot.agency.trusted?'Remove trust':'Mark trusted'}</button>
+        <button type="button" class="admin-button" onclick="recomputeAgencySafety()" data-testid="button-agency-recompute">Recompute evidence</button>
         <button type="button" class="admin-button" onclick="exportAgencyPDF()" data-testid="button-export-agency-pdf">Export PDF</button>
         <button type="button" class="admin-button primary" onclick="shareAgencyReport()" data-testid="button-share-agency-report">Share report</button>
       </div>
@@ -3900,7 +4003,7 @@ function renderAdmin(){
   $('adminMetrics').innerHTML=[
     ['Users',users.length,'Registered accounts'],['Journeys',journeys.length,'Recorded trips'],
     ['Violations',totalViolations,'All current records'],['Active reports',reports.filter(item=>item.status==='active').length,'Need attention'],
-    ['Trusted agencies',AGENCIES.filter(item=>item.score===100).length,`${AGENCIES.length} total agencies`]
+    ['Trusted agencies',AGENCIES.filter(item=>item.status==='trusted').length,`${AGENCIES.length} total agencies`]
   ].map(([label,value,detail],index)=>`<div class="admin-metric" data-testid="admin-kpi-${index}"><span>${label}</span><strong>${value}</strong><small>${detail}</small></div>`).join('');
   $('adminUsers').innerHTML=users.length?users.map(user=>`
     <div class="admin-row" data-testid="admin-user-${escapeHTML(user.phone||user.id)}">
@@ -4029,11 +4132,15 @@ function moderateReport(id,status){
   if(status==='resolved')report.resolvedAt=report.updatedAt;else delete report.resolvedAt;
   aaRepository.upsert('incidents',report);syncHazardMarkers();queueSync();renderAdmin();
 }
-function toggleAgencyTrusted(id){
-  const agency=AGENCIES.find(item=>item.id===id);
-  if(!agency)return;
-  agency.score=agency.score===100?85:100;
-  aaRepository.upsert('agencies',agency);queueSync();renderAdmin();
+async function recomputeAgencySafety(){
+  const session=getAASession();
+  if(!session?.token||session.role!=='admin')return;
+  try{
+    await callAppApi('/api/admin/safety-rollups',{method:'POST',token:session.token,body:{}});
+    await loadSpeedBoardEvidence();
+    renderAdmin();
+    showToast('Safety evidence recomputed');
+  }catch(error){showToast(error.message||'Safety evidence could not be recomputed');}
 }
 function addAgency(){
   const name=$('adminAgencyName').value.trim();
@@ -4083,6 +4190,7 @@ function renderReportGrids(){
 function prepareReport(){
   $('screen-report').scrollTop=0;
   renderReportGrids();
+  renderSpeedReportEvidence();
   if(!reportLocation)useVehicleLocation(false);
   else updateReportLocationCard();
 }
@@ -4093,7 +4201,15 @@ function selectReport(type,i){
     $('inc-'+i).classList.add('selected');
     $('reportLocationError').classList.remove('show');
   }
-  else{selectedConduct=i;document.querySelectorAll('[id^="con-"]').forEach(e=>e.classList.remove('selected'));$('con-'+i).classList.add('selected');}
+  else{selectedConduct=i;document.querySelectorAll('[id^="con-"]').forEach(e=>e.classList.remove('selected'));$('con-'+i).classList.add('selected');renderSpeedReportEvidence();}
+}
+function isSpeedingConduct(){return selectedConduct!==null&&CONDUCT[selectedConduct]?.label==='Speeding';}
+function renderSpeedReportEvidence(){
+  const panel=$('speedReportEvidence'),select=$('reportAgency');
+  panel.hidden=!isSpeedingConduct();
+  const options=availableAgencyOptions();
+  select.innerHTML='<option value="">Select the observed agency</option>'+options.map(item=>`<option value="${item.id}">${escapeHTML(item.name)}</option>`).join('');
+  if(journey.agencyId&&options.some(item=>item.id===Number(journey.agencyId)))select.value=String(journey.agencyId);
 }
 function updateReportLocationCard(){
   const coords=$('reportLocationCoords'),status=$('reportLocationStatus');
@@ -4159,7 +4275,7 @@ function confirmPinPlacement(){
   updateReportLocationCard();
   showToast('Incident pin updated');
 }
-function submitReport(){
+async function submitReport(){
   if(selectedIncident===null&&selectedConduct===null){showToast('Select an incident or conduct issue');return;}
   if(selectedIncident!==null&&!reportLocation){
     $('reportLocationError').classList.add('show');
@@ -4184,10 +4300,23 @@ function submitReport(){
     $('fabHazard').classList.add('active');
     syncHazardMarkers();
   }
+  if(isSpeedingConduct()){
+    const session=getAASession(),agencyId=Number($('reportAgency').value),speedKph=Number($('reportSpeed').value);
+    const plate=$('reportPlate').value.trim().toUpperCase();
+    if(!session?.token){showToast('Sign in to submit speed evidence');return;}
+    if(!Number.isInteger(agencyId)||agencyId<1){showToast('Select the observed travel agency');return;}
+    if(!Number.isFinite(speedKph)||speedKph<1||speedKph>300){showToast('Enter an observed speed between 1 and 300 km/h');return;}
+    try{
+      await callAppApi('/api/speed-reports',{
+        method:'POST',token:session.token,idempotencyKey:`speed-report:${session.phone}:${agencyId}:${Date.now()}`,
+        body:{agencyId,mode:journey.mode==='bike'?'motorbike':journey.mode,speedKph,observedAt:new Date().toISOString(),vehicleFingerprint:plate||null,route:selectedDestination?.name||null}
+      });
+    }catch(error){showToast(error.message||'Speed report could not be submitted');return;}
+  }
   showToast('Report submitted — thank you');
   selectedIncident=selectedConduct=null;
   reportLocation=null;
-  renderReportGrids();$('reportPlate').value='';$('reportDesc').value='';
+  renderReportGrids();renderSpeedReportEvidence();$('reportPlate').value='';$('reportSpeed').value='';$('reportDesc').value='';
   goBack('journey');
   checkHazardProximity();
 }

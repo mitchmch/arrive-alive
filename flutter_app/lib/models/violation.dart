@@ -12,6 +12,9 @@ class Violation {
   final int reportCount;
   final int validated;
   final int published;
+  final String? episodeStartedAt;
+  final String? episodeEndedAt;
+  final int sampleCount;
 
   Violation({
     required this.id,
@@ -27,7 +30,10 @@ class Violation {
     this.reportCount = 1,
     this.validated = 0,
     this.published = 0,
-  });
+    this.episodeStartedAt,
+    this.episodeEndedAt,
+    int? sampleCount,
+  }) : sampleCount = sampleCount ?? reportCount;
 
   factory Violation.fromJson(Map<String, dynamic> json) => Violation(
         id: json['id'] ?? 0,
@@ -43,5 +49,8 @@ class Violation {
         reportCount: json['reportCount'] ?? 1,
         validated: json['validated'] ?? 0,
         published: json['published'] ?? 0,
+        episodeStartedAt: json['episodeStartedAt']?.toString(),
+        episodeEndedAt: json['episodeEndedAt']?.toString(),
+        sampleCount: (json['sampleCount'] ?? json['reportCount'] ?? 1) as int,
       );
 }

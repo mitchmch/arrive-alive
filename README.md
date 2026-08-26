@@ -13,6 +13,9 @@ Arrive Alive is a responsive road-safety web application for journey recording, 
 - Realtime-style hazard reporting with pinned locations
 - Proximity warnings and “Still there” or “Not there” hazard confirmation
 - Journey stopping, restarting, completion, history, scoreboard, and reporting flows
+- Automatic, deterministic journey safety assessment and Speed Board publishing
+- Evidence-thresholded daily, weekly, and monthly agency safety status
+- Deduplicated registered-user trusted/avoid notifications
 - Profile photos with client-side type/size validation and accessible preview
 - Per-account journey history
 - Role-gated administration for users, reports, agencies, speed limits, and sync health
@@ -179,7 +182,14 @@ node --check api/sync.js
 node tests/static-web-check.js
 node tests/repository-check.js
 node tests/sync-api-check.js
+node tests/backend-contract-check.js
 ```
+
+The safety backend deliberately keeps classification separate from generated
+text. Admin speed limits and fixed rules determine `trusted`, `avoid`, or
+`insufficient_evidence`; OpenAI is optional, server-side only, and can only
+rewrite an allowlisted aggregate summary. See `BACKEND.md` for thresholds,
+fallback behavior, scheduler authentication, migration order, and API routes.
 
 ### Authentication E2E checklist
 

@@ -4,6 +4,8 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const migration = fs.readFileSync(path.join(root, 'supabase/migrations/20260826190000_durable_backend.sql'), 'utf8');
 const publicReportsMigration = fs.readFileSync(path.join(root, 'supabase/migrations/20260826213000_public_agency_reports.sql'), 'utf8');
+const flutterEvidenceMigration = fs.readFileSync(path.join(root, 'supabase/migrations/20260826222000_speed_safety_evidence.sql'), 'utf8');
+const safetyMigration = fs.readFileSync(path.join(root, 'supabase/migrations/20260826223000_safety_intelligence.sql'), 'utf8');
 const edge = fs.readFileSync(path.join(root, 'supabase/functions/app-api/index.ts'), 'utf8');
 const helpers = fs.readFileSync(path.join(root, 'supabase/functions/app-api/helpers.ts'), 'utf8');
 const flutterApi = fs.readFileSync(path.join(root, 'flutter_app/lib/services/api_service.dart'), 'utf8');
@@ -32,4 +34,20 @@ assert.match(edge, /admin\(identity\).*publicReportSnapshot/s, 'Publishing must 
 assert.match(flutterApi, /'Authorization': 'Bearer \$token'/);
 assert.match(webRepository, /'Authorization': `Bearer \$\{tokenProvider\(\)\}`/);
 assert.doesNotMatch(edge, /service_role\s*[:=]\s*['"][A-Za-z0-9]/i);
+assert.match(safetyMigration, /create table if not exists public\.speed_samples/, 'Safety migration must remain compatible when the Flutter migration is present or reserved');
+assert.doesNotMatch(flutterEvidenceMigration, /create table public\.speed_samples/, 'Flutter compatibility migration must not recreate the shared speed sample table');
+for (const table of ['violation_episodes','speed_reports','evidence_correlations','journey_safety_assessments','speed_board_entries','agency_safety_rollups','user_notifications']) {
+  assert.match(safetyMigration, new RegExp(`create table public\\.${table}`));
+  assert.match(safetyMigration, new RegExp(`'${table}'`), `${table} must be included in the RLS deny loop`);
+}
+assert.match(safetyMigration, /create or replace function public\.finalize_journey_safety/);
+assert.match(safetyMigration, /on conflict \(journey_id\)/, 'Journey completion must be idempotent');
+assert.match(edge, /assessJourneySamples/);
+assert.match(edge, /robustWeightedSpeed/);
+assert.match(edge, /OPENAI_API_KEY/);
+assert.match(edge, /Never decide, revise, recommend, or infer trusted\/avoid status/);
+assert.match(edge, /SAFETY_SCHEDULER_SECRET/);
+for (const route of ['/api/journeys/complete-safety','/api/speed-board','/api/speed-reports','/api/notifications','/api/admin/safety-rollups','/api/safety/rollups/run']) {
+  assert.ok(edge.includes(route), `Safety API route missing: ${route}`);
+}
 console.log('Backend contract checks passed.');

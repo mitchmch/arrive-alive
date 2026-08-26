@@ -9,6 +9,8 @@ import '../services/connectivity_service.dart';
 import '../services/api_service.dart';
 import '../core/config.dart';
 import '../models/sync_record.dart';
+import '../models/speed_sample.dart';
+import '../models/violation_episode.dart';
 
 /// Handles offline-first writes: queues operations locally and syncs to the server
 /// when connectivity is restored. Manages localId -> remoteId mapping for journeys
@@ -132,6 +134,8 @@ class SyncService {
     List<Map<String, double>>? path,
     List<Map<String, dynamic>>? violations,
   }) async {
+    final existing = await _db.getJourneyByLocalId(localId);
+    if (existing?['status'] == 'completed') return;
     final now = DateTime.now().toIso8601String();
     final pathJson = jsonEncode(path ?? []);
     final violationsJson = jsonEncode(violations ?? []);
@@ -146,54 +150,77 @@ class SyncService {
       'path': pathJson,
       'violations': violationsJson,
       'updatedAt': now,
-      'version':
-          ((await _db.getJourneyByLocalId(localId))?['version'] as int? ?? 0) +
-              1,
+      'version': ((existing?['version'] as int?) ?? 0) + 1,
     });
 
     final journey = await _db.getJourneyByLocalId(localId);
     final remoteId = journey?['remoteId'];
 
-    final updateBody = {
-      'status': 'completed',
-      'endTime': now,
-      'maxSpeed': maxSpeed,
-      'distance': distance,
-      'violationCount': violationCount,
-      'score': score,
-      'path': pathJson,
-      'violations': violationsJson,
-      'updatedAt': now,
-      'version': journey?['version'] ?? 1,
+    final samples = await _db.getJourneySpeedSamples(localId);
+    final finalizeBody = {
+      'journey': {
+        'localId': localId,
+        'mode': journey?['mode'] ?? 'car',
+        'agencyId': journey?['agencyId'],
+        'vehicleDetails': journey?['vehicleDetails'] ?? '{}',
+        'assets': journey?['assets'] ?? '[]',
+        'defects': journey?['defects'] ?? '[]',
+        'driverName': journey?['driverName'],
+        'passengerCount': journey?['passengerCount'] ?? 1,
+        'startTime': journey?['startTime'],
+        'endTime': now,
+        'distance': distance,
+        'path': pathJson,
+        'updatedAt': now,
+        'version': journey?['version'] ?? 1,
+      },
+      'samples': samples
+          .map((sample) => {
+                'recordedAt': sample['recordedAt'],
+                'speedKph': sample['speed'],
+                'speedLimitKph': sample['speedLimit'],
+                'accuracyM': sample['accuracy'],
+                'latitude': sample['latitude'],
+                'longitude': sample['longitude'],
+              })
+          .toList(),
     };
-
-    if (remoteId != null) {
-      // Journey already synced — queue an update with known endpoint
-      await _db.enqueueSync({
-        'operationId': 'update_journey:$localId:${journey?['version']}',
-        'operation': 'update_journey',
-        'endpoint': '/api/journeys/$remoteId',
-        'method': 'PATCH',
-        'body': jsonEncode(updateBody),
-        'dependsOn': null,
-      });
-    } else {
-      // Journey not yet synced — queue a dependent update that will be
-      // resolved with the correct endpoint after create_journey succeeds
-      await _db.enqueueSync({
-        'operationId': 'update_journey:$localId:${journey?['version']}',
-        'operation': 'update_journey',
-        'endpoint': '', // Will be resolved after create_journey syncs
-        'method': 'PATCH',
-        'body': jsonEncode(updateBody),
-        'dependsOn': 'create_journey:$localId',
-      });
-    }
+    await _db.enqueueSync({
+      'operationId': 'complete_journey_safety:$localId',
+      'operation': 'complete_journey_safety',
+      'endpoint': '/api/journeys/complete-safety',
+      'method': 'POST',
+      'body': jsonEncode(finalizeBody),
+      'dependsOn': remoteId == null ? 'create_journey:$localId' : null,
+    });
 
     _syncStatusController.add(SyncStatus.queued);
     if (AppConfig.hasBackend && await _connectivity.checkOnline()) {
       syncAll();
     }
+  }
+
+  /// Persist every filtered location reading as evidence and queue it behind
+  /// the journey create. The stable sample ID and queue operation ID make
+  /// retries safe.
+  Future<void> createSpeedSampleLocal(SpeedSample sample) async {
+    await _db.insertSpeedSample({
+      'localId': sample.localId,
+      'remoteId': null,
+      'journeyLocalId': sample.journeyLocalId,
+      'journeyRemoteId': sample.journeyId,
+      'recordedAt': sample.recordedAt.toUtc().toIso8601String(),
+      'speed': sample.speed,
+      'speedLimit': sample.speedLimit,
+      'latitude': sample.latitude,
+      'longitude': sample.longitude,
+      'accuracy': sample.accuracy,
+      'isMoving': sample.isMoving ? 1 : 0,
+      'synced': 0,
+    });
+    // Samples are uploaded atomically with journey completion. Keeping them
+    // local until then avoids thousands of queue rows and lets the backend
+    // re-evaluate the full evidence set against its admin-owned limit.
   }
 
   /// Create a violation locally (offline-first)
@@ -208,6 +235,7 @@ class SyncService {
     required double lat,
     required double lng,
     int reportCount = 1,
+    ViolationEpisode? episode,
   }) async {
     final localId = _uuid.v4();
     final now = DateTime.now().toIso8601String();
@@ -225,42 +253,18 @@ class SyncService {
       'lat': lat,
       'lng': lng,
       'reportCount': reportCount,
+      'episodeStartedAt': episode?.startedAt.toUtc().toIso8601String(),
+      'episodeEndedAt': episode?.endedAt.toUtc().toIso8601String(),
+      'sampleCount': episode?.sampleCount ?? reportCount,
       'timestamp': now,
       'synced': 0,
       'updatedAt': now,
       'version': 1,
     });
 
-    // Queue the violation creation — depends on the journey being synced first
-    await _db.enqueueSync({
-      'operationId': 'create_violation:$localId',
-      'operation': 'create_violation',
-      'endpoint': '/api/violations',
-      'method': 'POST',
-      'body': jsonEncode({
-        'localId': localId,
-        'journeyLocalId': journeyLocalId,
-        'journeyRemoteId': journeyRemoteId,
-        'vehicleReg': vehicleReg,
-        'mode': mode,
-        'agencyId': agencyId,
-        'speed': speed,
-        'speedLimit': speedLimit,
-        'lat': lat,
-        'lng': lng,
-        'reportCount': reportCount,
-        'updatedAt': now,
-        'version': 1,
-      }),
-      'dependsOn':
-          journeyRemoteId == null ? 'create_journey:$journeyLocalId' : null,
-    });
-
-    _syncStatusController.add(SyncStatus.queued);
-    if (AppConfig.hasBackend && await _connectivity.checkOnline()) {
-      syncAll();
-    }
-
+    // Episode rows remain available offline; the complete-safety request sends
+    // the underlying samples and the backend independently reconstructs the
+    // authoritative episodes and classification.
     return localId;
   }
 
@@ -415,7 +419,6 @@ class SyncService {
           if (method == 'POST') {
             // Remove local-only fields before sending
             final sendBody = Map<String, dynamic>.from(body);
-            sendBody.remove('localId');
             sendBody.remove('journeyLocalId');
             sendBody.remove('journeyRemoteId');
             result = await ApiService.post(
@@ -448,6 +451,19 @@ class SyncService {
               'remoteId': remoteId,
               'synced': 1,
             });
+          } else if (operation == 'create_speed_sample' && result != null) {
+            final localId = body['localId'] as String;
+            await _db.updateSpeedSample(localId, {
+              'remoteId': result['id'],
+              'synced': 1,
+            });
+          } else if (operation == 'complete_journey_safety' && result != null) {
+            final nested = body['journey'];
+            if (nested is Map && nested['localId'] != null) {
+              await _db.markJourneyEvidenceSynced(
+                nested['localId'].toString(),
+              );
+            }
           }
 
           // Remove from queue on success

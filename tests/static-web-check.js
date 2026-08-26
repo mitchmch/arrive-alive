@@ -115,8 +115,18 @@ assert.match(html, /API connected · not durable/, 'The UI must not imply that t
 assert.match(html, /data-testid="screen-speed-board"/, 'Speed Board must have a stable screen hook');
 assert.match(html, /data-testid="tab-trusted-agencies"[^>]*>Trusted agencies</, 'Trusted agencies tab must be present');
 assert.match(html, /data-testid="tab-speeding-vehicles"[^>]*>Speeding vehicles</, 'Speeding vehicles tab must be present');
-assert.match(html, /\?'\u2713 Trusted':'Safety score'/, '100-score agencies must be clearly marked as trusted');
-for (const label of ['Measured', 'Limit', 'Over by', 'Agency:', 'Route:', 'Time:']) {
+assert.match(html, /Trusted':avoid\?'Avoid':'Insufficient evidence'/, 'Agency labels must use evidence statuses instead of inferred scores');
+assert.match(html, /without minimum independent evidence remain unclassified/, 'Speed Board must explain the minimum evidence gate');
+assert.match(html, /\/api\/journeys\/complete-safety/, 'Journey completion must call the deterministic safety endpoint');
+assert.match(html, /speedKph:Math\.round\(liveSpeed\*10\)\/10/, 'Web telemetry must use the backend speedKph contract');
+assert.match(html, /agencyId:journey\.agencyId/, 'Journey safety completion must preserve agency attribution');
+assert.match(html, /entries\.filter\(item=>item\.resultType==='violator'\)/, 'The speeding tab must exclude compliant journeys');
+assert.match(html, /\/api\/speed-reports/, 'Registered users must be able to submit corroborating speed evidence');
+assert.match(html, /cannot create or change a violation by itself/, 'The report form must explain the telemetry safeguard');
+assert.match(html, /data-testid="button-agency-recompute"/, 'Administrators must recompute evidence rather than manually assigning trust');
+assert.doesNotMatch(html, /function toggleAgencyTrusted/, 'Safety classifications must not be manually overridden in the client');
+assert.match(html, /\/api\/notifications/, 'Registered-user safety notifications must be loaded');
+for (const label of ['Measured', 'Limit', 'Over by', 'Agency:', 'Assessment:', 'Published:']) {
   assert.match(html, new RegExp(`>${label}<`), `Speeding vehicle rows must show ${label}`);
 }
 assert.doesNotMatch(html, />Scoreboard</, 'User-facing Scoreboard labels must be renamed');

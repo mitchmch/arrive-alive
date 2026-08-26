@@ -6,8 +6,7 @@ import '../core/access_policy.dart';
 import '../core/theme.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/scoreboard_controller.dart';
-import '../models/violation.dart';
-import '../models/agency.dart';
+import '../models/speed_board_entry.dart';
 import 'access_screen.dart';
 import 'journey_screen.dart';
 import 'login_screen.dart';
@@ -30,8 +29,8 @@ class _ScoreboardScreenState extends ConsumerState<ScoreboardScreen> {
       return _signInRequired(context);
     }
 
-    final violationsAsync = ref.watch(publishedViolationsProvider);
-    final agenciesAsync = ref.watch(agenciesProvider);
+    final boardAsync = ref.watch(speedBoardEntriesProvider);
+    final rollupsAsync = ref.watch(agencySafetyRollupsProvider);
 
     return PopScope(
       canPop: true,
@@ -131,9 +130,191 @@ class _ScoreboardScreenState extends ConsumerState<ScoreboardScreen> {
             ),
             Expanded(
               child: _tab == 0
-                  ? _agenciesTab(agenciesAsync)
-                  : _violationsTab(violationsAsync),
+                  ? _rollupsTab(rollupsAsync, boardAsync)
+                  : _boardViolationsTab(boardAsync),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _rollupsTab(
+    AsyncValue<List<AgencySafetyRollup>> rollupsAsync,
+    AsyncValue<List<SpeedBoardEntry>> boardAsync,
+  ) {
+    return rollupsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(child: Text('Error: $error')),
+      data: (rollups) {
+        final trusted = rollups.where((item) => item.isTrusted).toList();
+        final avoid = rollups.where((item) => item.shouldAvoid).toList();
+        final withinLimit = boardAsync.valueOrNull
+                ?.where((item) => item.isWithinLimit)
+                .toList() ??
+            const <SpeedBoardEntry>[];
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _sectionTitle(
+              'Trusted agencies',
+              'Backed by deterministic evidence thresholds.',
+            ),
+            if (trusted.isEmpty)
+              const Card(
+                child: ListTile(
+                  title: Text('No trusted agencies published yet'),
+                ),
+              )
+            else
+              ...trusted.map(_rollupCard),
+            const SizedBox(height: 18),
+            _sectionTitle(
+              'Within-limit journeys',
+              'Published journeys with no sustained violation episode.',
+            ),
+            if (withinLimit.isEmpty)
+              const Card(
+                child: ListTile(
+                  title: Text('No within-limit journeys published yet'),
+                ),
+              )
+            else
+              ...withinLimit.map(_withinLimitCard),
+            if (avoid.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              _sectionTitle(
+                'Agencies to avoid',
+                'Evidence thresholds were met for an avoid classification.',
+                color: AppTheme.destructive,
+              ),
+              ...avoid.map(_rollupCard),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _boardViolationsTab(
+    AsyncValue<List<SpeedBoardEntry>> boardAsync,
+  ) {
+    return boardAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(child: Text('Error: $error')),
+      data: (entries) {
+        final violations = entries.where((item) => item.isViolation).toList();
+        if (violations.isEmpty) {
+          return const Center(
+            child: Text('No speeding vehicles published yet'),
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: violations.map(_boardViolationCard).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _sectionTitle(String title, String subtitle, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.dmSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          Text(
+            subtitle,
+            style: GoogleFonts.dmSans(
+              fontSize: 12,
+              color: AppTheme.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rollupCard(AgencySafetyRollup rollup) {
+    final avoid = rollup.shouldAvoid;
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          avoid ? Icons.warning_amber_rounded : Icons.verified,
+          color: avoid ? AppTheme.destructive : AppTheme.primary,
+        ),
+        title: Text(
+          rollup.agencyName,
+          style: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          '${rollup.displaySummary}\n'
+          '${rollup.journeyCount} journeys · '
+          '${(rollup.confidence * 100).toStringAsFixed(0)}% confidence',
+        ),
+        isThreeLine: true,
+        trailing: Text(avoid ? 'Avoid' : 'Trusted'),
+      ),
+    );
+  }
+
+  Widget _withinLimitCard(SpeedBoardEntry entry) {
+    return Card(
+      child: ListTile(
+        leading:
+            const Icon(Icons.check_circle_outline, color: AppTheme.primary),
+        title: Text(entry.agencyName),
+        subtitle: Text(
+          '${entry.mode} · ${entry.sampleCount} accepted samples\n'
+          '${entry.summary}',
+        ),
+        isThreeLine: true,
+        trailing: const Text('Within limit'),
+      ),
+    );
+  }
+
+  Widget _boardViolationCard(SpeedBoardEntry entry) {
+    final over = (entry.peakSpeed - entry.speedLimit).clamp(0, double.infinity);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              entry.vehicleReg.isEmpty ? entry.agencyName : entry.vehicleReg,
+              style: GoogleFonts.dmSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '+${over.toStringAsFixed(0)} km/h over',
+              style: GoogleFonts.dmSans(
+                color: AppTheme.destructive,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              '${entry.peakSpeed.toStringAsFixed(0)} km/h · '
+              'limit ${entry.speedLimit.toStringAsFixed(0)} · '
+              '${entry.episodeCount} episodes',
+              style: GoogleFonts.dmSans(color: AppTheme.textMuted),
+            ),
+            if (entry.summary.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(entry.summary),
+            ],
           ],
         ),
       ),
@@ -253,226 +434,5 @@ class _ScoreboardScreenState extends ConsumerState<ScoreboardScreen> {
       MaterialPageRoute(builder: (_) => const JourneyScreen()),
       (_) => false,
     );
-  }
-
-  Widget _agenciesTab(AsyncValue<List<Agency>> agenciesAsync) {
-    return agenciesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (agencies) {
-        final sorted = List<Agency>.from(agencies)
-          ..sort((a, b) => a.safetyScore.compareTo(b.safetyScore));
-        final needsAttention =
-            sorted.where((a) => a.safetyScore < 100).toList();
-        final trusted = sorted.where((a) => a.safetyScore == 100).toList();
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(
-              'Trusted agencies',
-              style: GoogleFonts.dmSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Agencies with a clear published safety record.',
-              style: GoogleFonts.dmSans(
-                fontSize: 13,
-                color: AppTheme.textMuted,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (trusted.isEmpty)
-              const Card(
-                child: ListTile(
-                  leading: Icon(Icons.verified_outlined),
-                  title: Text('No trusted agencies published yet'),
-                ),
-              )
-            else
-              ...trusted.asMap().entries.map(
-                    (e) => _agencyCard(e.key + 1, e.value, trusted: true),
-                  ),
-            if (needsAttention.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              Text(
-                'Needs attention',
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ...needsAttention.asMap().entries.map(
-                    (e) => _agencyCard(
-                      trusted.length + e.key + 1,
-                      e.value,
-                      trusted: false,
-                    ),
-                  ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _agencyCard(int rank, Agency agency, {required bool trusted}) {
-    final region = agency.region?.trim();
-    return Card(
-      color: trusted
-          ? AppTheme.primary.withValues(alpha: 0.06)
-          : Theme.of(context).cardColor,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: AppTheme.primary.withValues(alpha: 0.14),
-          foregroundColor: AppTheme.primary,
-          child: trusted
-              ? const Icon(Icons.verified, size: 21)
-              : Text(
-                  '$rank',
-                  style: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
-                ),
-        ),
-        title: Text(
-          agency.name,
-          style: GoogleFonts.dmSans(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          [
-            if (region != null && region.isNotEmpty) region,
-            trusted
-                ? 'Trusted safety record'
-                : '${agency.violationCount} published violations',
-          ].join(' · '),
-          style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted),
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.primary,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            trusted ? 'Trusted' : '${agency.safetyScore.toInt()}%',
-            style: GoogleFonts.dmSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _violationsTab(AsyncValue<List<Violation>> violationsAsync) {
-    return violationsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (violations) {
-        if (violations.isEmpty) {
-          return Center(
-            child: Text(
-              'No speeding vehicles published yet',
-              style: GoogleFonts.dmSans(color: AppTheme.textMuted),
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: violations.length,
-          itemBuilder: (ctx, i) => _violationCard(violations[i]),
-        );
-      },
-    );
-  }
-
-  Widget _violationCard(Violation v) {
-    final overLimit = (v.speed - v.speedLimit).clamp(0, double.infinity);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    v.vehicleReg,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Text(
-                  _formatDate(v.timestamp),
-                  style: GoogleFonts.dmSans(
-                    fontSize: 11,
-                    color: AppTheme.textMuted,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.destructive,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '+${overLimit.toStringAsFixed(0)} km/h over',
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${v.speed.toStringAsFixed(0)} km/h · limit ${v.speedLimit.toStringAsFixed(0)}',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${v.mode} · ${v.reportCount} reports',
-              style: GoogleFonts.dmSans(
-                fontSize: 12,
-                color: AppTheme.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(String ts) {
-    try {
-      return DateTime.parse(ts).toString().substring(0, 10);
-    } catch (_) {
-      return ts;
-    }
   }
 }

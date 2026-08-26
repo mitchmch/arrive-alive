@@ -1,3 +1,5 @@
+import 'agency_notice.dart';
+
 class Agency {
   final int id;
   final String name;
@@ -7,6 +9,8 @@ class Agency {
   final int violationCount;
   final int totalJourneys;
   final Map<String, int> vehicleBreakdown;
+  final AgencyClassification classification;
+  final String summaryText;
 
   Agency({
     required this.id,
@@ -17,9 +21,14 @@ class Agency {
     this.violationCount = 0,
     this.totalJourneys = 0,
     this.vehicleBreakdown = const {},
+    this.classification = AgencyClassification.unclassified,
+    this.summaryText = '',
   });
 
-  bool get isTrusted => safetyScore >= 100;
+  bool get isTrusted => classification == AgencyClassification.trusted;
+  bool get isWithinLimit =>
+      classification == AgencyClassification.withinLimit || isTrusted;
+  bool get shouldAvoid => classification == AgencyClassification.avoid;
 
   String get reportSummary {
     const order = ['car', 'bus', 'lorry', 'motorbike'];
@@ -62,6 +71,10 @@ class Agency {
       totalJourneys:
           journeys is num ? journeys.toInt() : int.tryParse('$journeys') ?? 0,
       vehicleBreakdown: breakdown,
+      classification: parseAgencyClassification(
+        json['classification'] ?? json['safetyClassification'],
+      ),
+      summaryText: (json['summaryText'] ?? json['aiSummary'] ?? '').toString(),
     );
   }
 

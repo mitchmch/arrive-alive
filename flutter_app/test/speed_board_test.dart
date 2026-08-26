@@ -1,9 +1,8 @@
 import 'package:arrive_alive/controllers/auth_controller.dart';
 import 'package:arrive_alive/controllers/scoreboard_controller.dart';
 import 'package:arrive_alive/core/theme.dart';
-import 'package:arrive_alive/models/agency.dart';
 import 'package:arrive_alive/models/user.dart';
-import 'package:arrive_alive/models/violation.dart';
+import 'package:arrive_alive/models/speed_board_entry.dart';
 import 'package:arrive_alive/screens/scoreboard_screen.dart';
 import 'package:arrive_alive/widgets/bottom_nav.dart';
 import 'package:flutter/material.dart';
@@ -28,26 +27,35 @@ void main() {
               loadStoredUser: false,
             ),
           ),
-          agenciesProvider.overrideWith(
+          agencySafetyRollupsProvider.overrideWith(
             (ref) async => [
-              Agency(id: 1, name: 'Safe Transit', safetyScore: 100),
-            ],
-          ),
-          publishedViolationsProvider.overrideWith(
-            (ref) async => [
-              Violation(
-                id: 1,
-                journeyId: 1,
-                vehicleReg: 'LT 123 AA',
-                mode: 'bus',
-                speed: 85,
-                speedLimit: 60,
-                lat: 0,
-                lng: 0,
-                timestamp: '2026-08-26T10:00:00Z',
+              const AgencySafetyRollup(
+                id: 'rollup-1',
+                agencyName: 'Safe Transit',
+                status: 'trusted',
+                confidence: 0.9,
+                journeyCount: 20,
+                violationJourneyCount: 0,
+                deterministicSummary: 'Reviewed evidence is within threshold.',
               ),
             ],
           ),
+          speedBoardEntriesProvider.overrideWith((ref) async => [
+                const SpeedBoardEntry(
+                  id: 'entry-1',
+                  resultType: 'violator',
+                  agencyName: 'Example Agency',
+                  mode: 'bus',
+                  vehicleReg: 'LT 123 AA',
+                  evidence: {
+                    'peakSpeedKph': 85,
+                    'speedLimitKph': 60,
+                    'episodeCount': 1,
+                    'sampleCount': 30,
+                  },
+                  summary: 'Sustained speed violation detected.',
+                ),
+              ]),
         ],
         child: MaterialApp(
           theme: AppTheme.lightTheme,

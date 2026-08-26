@@ -1,5 +1,5 @@
 import {createClient} from '@supabase/supabase-js';
-import {ApiError, CONTRACT_VERSION, camel, deriveSecret, normalizePhone, optionalNumber, parseJsonValue, randomToken, requireString, routePath, safeEqual, sha256} from './helpers.ts';
+import {ApiError, CONTRACT_VERSION, ROLLUP_THRESHOLDS, assessJourneySamples, camel, decideAgencyRollup, deriveSecret, normalizePhone, optionalNumber, parseJsonValue, randomToken, requireString, robustWeightedSpeed, routePath, safeEqual, sanitizeSummaryFacts, sha256, stableUuid} from './helpers.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -12,6 +12,9 @@ const ALLOWED_ORIGINS = (Deno.env.get('APP_ALLOWED_ORIGINS') ?? DEFAULT_ALLOWED_
   .map((v) => v.trim())
   .filter(Boolean);
 const SESSION_TTL_DAYS = Math.max(1, Math.min(90, Number(Deno.env.get('APP_SESSION_TTL_DAYS') ?? 30)));
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
+const OPENAI_SUMMARY_MODEL = Deno.env.get('OPENAI_SUMMARY_MODEL') ?? 'gpt-5-mini';
+const SCHEDULER_SECRET = Deno.env.get('SAFETY_SCHEDULER_SECRET') ?? '';
 if (!SUPABASE_URL || !SERVICE_KEY) console.error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
 const db = createClient(SUPABASE_URL, SERVICE_KEY, {auth: {persistSession: false, autoRefreshToken: false}});
 
@@ -61,9 +64,13 @@ async function idempotent(identity:Identity, req:Request, path:string, payload:u
 function ensure(data:unknown,error:unknown):any { if(error) throw error; return data; }
 function formatJourney(row:Record<string,unknown>){const value=camel(row);for(const key of ['vehicleDetails','assets','defects','path'])if(typeof value[key]!=='string')value[key]=JSON.stringify(value[key]??(key==='vehicleDetails'?{}:[]));return value;}
 function formatIncident(row:Record<string,unknown>){return camel(row);}
-function formatAgency(row:Record<string,unknown>){const value=camel(row);return {...value,phone:value.contact??null,violationCount:(value.metadata as any)?.violationCount??0,totalJourneys:(value.metadata as any)?.totalJourneys??0};}
+function formatAgency(row:Record<string,unknown>){const value=camel(row);return {...value,phone:value.contact??null,classification:value.safetyClassification??'unclassified',summaryText:value.summaryText??'',summarySource:value.summarySource??'human',violationCount:(value.metadata as any)?.violationCount??0,totalJourneys:(value.metadata as any)?.totalJourneys??0};}
 function formatSpeedLimit(row:Record<string,unknown>){const value=camel(row);return {...value,vehicle_type:value.mode,limit_kmh:value.limitKph};}
-function formatViolation(row:Record<string,unknown>){const value=camel(row);return {...value,lat:value.latitude??0,lng:value.longitude??0,timestamp:value.occurredAt,mode:(value.metadata as any)?.mode??'car',validated:value.status==='validated'?1:0,published:value.published?1:0,reportCount:(value.metadata as any)?.reportCount??1};}
+function formatViolation(row:Record<string,unknown>){const value=camel(row);return {...value,lat:value.latitude??0,lng:value.longitude??0,timestamp:value.occurredAt,mode:(value.metadata as any)?.mode??'car',validated:value.status==='validated'?1:0,published:value.published?1:0,reportCount:value.sampleCount??(value.metadata as any)?.reportCount??1};}
+function formatSpeedBoardEntry(row:Record<string,any>){
+  const value=camel(row),journey=row.journeys??{},vehicle=journey.vehicle_details??{};
+  return {...value,journeys:{stableId:journey.stable_id??null,mode:journey.mode??'car',vehicleReg:typeof vehicle.reg==='string'?vehicle.reg.slice(0,32):null}};
+}
 function stable(body:Record<string,unknown>, prefix:string):string {
   const raw=String(body.stableId ?? body.localId ?? body.id ?? randomToken(16));
   const value=raw.replace(/[^A-Za-z0-9_.:-]/g,'').slice(0,100);
@@ -72,6 +79,91 @@ function stable(body:Record<string,unknown>, prefix:string):string {
 function choice(value:unknown, allowed:string[], fallback:string):string {
   const candidate=String(value??fallback);
   return allowed.includes(candidate)?candidate:fallback;
+}
+
+async function writeOptionalSummary(facts:Record<string,unknown>, fallback:string):Promise<{text:string;status:'generated'|'fallback'|'failed'}> {
+  if(!OPENAI_API_KEY)return {text:fallback,status:'fallback'};
+  const safeFacts=sanitizeSummaryFacts(facts);
+  try{
+    const response=await fetch('https://api.openai.com/v1/responses',{
+      method:'POST',
+      headers:{'Authorization':`Bearer ${OPENAI_API_KEY}`,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:OPENAI_SUMMARY_MODEL,
+        max_output_tokens:180,
+        input:[
+          {role:'system',content:'Write one neutral road-safety summary using only the supplied aggregate facts. Never decide, revise, recommend, or infer trusted/avoid status. Repeat the supplied status exactly. Do not mention people, identity, protected attributes, precise locations, or speculate. Return JSON only.'},
+          {role:'user',content:JSON.stringify(safeFacts)},
+        ],
+        text:{format:{type:'json_schema',name:'safety_summary',strict:true,schema:{type:'object',properties:{summary:{type:'string',maxLength:600}},required:['summary'],additionalProperties:false}}},
+      }),
+    });
+    if(!response.ok)throw new Error(`OpenAI returned ${response.status}`);
+    const payload=await response.json();
+    const raw=payload.output_text??payload.output?.flatMap((item:any)=>item.content??[]).find((item:any)=>item.type==='output_text')?.text;
+    const parsed=JSON.parse(String(raw??'{}'));
+    if(typeof parsed.summary!=='string'||!parsed.summary.trim())throw new Error('OpenAI response did not match schema');
+    return {text:parsed.summary.trim().slice(0,600),status:'generated'};
+  }catch(error){
+    console.error('Optional summary generation failed',error);
+    return {text:fallback,status:'failed'};
+  }
+}
+
+function periodBounds(period:'daily'|'weekly'|'monthly', now=new Date()){
+  const date=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()));
+  if(period==='weekly')date.setUTCDate(date.getUTCDate()-((date.getUTCDay()+6)%7));
+  if(period==='monthly')date.setUTCDate(1);
+  const end=new Date(date);
+  if(period==='daily')end.setUTCDate(end.getUTCDate()+1);
+  if(period==='weekly')end.setUTCDate(end.getUTCDate()+7);
+  if(period==='monthly')end.setUTCMonth(end.getUTCMonth()+1);
+  return {start:date,end};
+}
+
+async function computeAgencyRollups(periods:Array<'daily'|'weekly'|'monthly'>=['daily','weekly','monthly']){
+  const {data:agencies,error:agencyError}=await db.from('agencies').select('id,name').is('deleted_at',null);
+  ensure(agencies,agencyError);
+  const results:any[]=[];
+  for(const agency of agencies??[])for(const period of periods){
+    const bounds=periodBounds(period);
+    const {data,error}=await db.from('journey_safety_assessments')
+      .select('accepted_sample_count,duration_seconds,episode_count,journeys!inner(user_id,end_time)')
+      .eq('agency_id',agency.id).gte('journeys.end_time',bounds.start.toISOString()).lt('journeys.end_time',bounds.end.toISOString());
+    const rows=ensure(data,error) as any[];
+    const journeyCount=rows.length,distinctUserCount=new Set(rows.map(row=>row.journeys?.user_id)).size;
+    const totalDurationSeconds=rows.reduce((sum,row)=>sum+Number(row.duration_seconds||0),0);
+    const acceptedSampleCount=rows.reduce((sum,row)=>sum+Number(row.accepted_sample_count||0),0);
+    const violationJourneyCount=rows.filter(row=>Number(row.episode_count)>0).length;
+    const violationEpisodeCount=rows.reduce((sum,row)=>sum+Number(row.episode_count||0),0);
+    const {data:correlations,error:correlationError}=await db.from('evidence_correlations')
+      .select('robust_speed_kph,independent_reporter_count,outlier_count,violation_episodes!inner(agency_id,started_at)')
+      .eq('violation_episodes.agency_id',agency.id).gte('violation_episodes.started_at',bounds.start.toISOString()).lt('violation_episodes.started_at',bounds.end.toISOString());
+    const correlationRows=ensure(correlations,correlationError) as any[];
+    const independentReporterCount=correlationRows.reduce((sum,row)=>sum+Number(row.independent_reporter_count||0),0);
+    const outlierCount=correlationRows.reduce((sum,row)=>sum+Number(row.outlier_count||0),0);
+    const correlationWeight=correlationRows.reduce((sum,row)=>sum+1+Math.min(1.5,Number(row.independent_reporter_count||0)*.35),0);
+    const weightedSpeedKph=correlationWeight
+      ? correlationRows.reduce((sum,row)=>{
+          const weight=1+Math.min(1.5,Number(row.independent_reporter_count||0)*.35);
+          return sum+Number(row.robust_speed_kph||0)*weight;
+        },0)/correlationWeight
+      : null;
+    const decision=decideAgencyRollup({journeyCount,distinctUserCount,totalDurationSeconds,violationJourneyCount});
+    const fallback=`${agency.name}: ${decision.status.replaceAll('_',' ')} for this ${period} period. ${decision.reasons.join('. ')}.`;
+    const summary=await writeOptionalSummary({period,periodStart:bounds.start.toISOString().slice(0,10),periodEnd:bounds.end.toISOString().slice(0,10),status:decision.status,confidence:decision.confidence,journeyCount,distinctUserCount,acceptedSampleCount,totalDurationSeconds,violationJourneyCount,violationEpisodeCount,independentReporterCount,outlierCount,weightedSpeedKph,reasons:decision.reasons,thresholds:ROLLUP_THRESHOLDS},fallback);
+    const row={agency_id:agency.id,period,period_start:bounds.start.toISOString().slice(0,10),period_end:bounds.end.toISOString().slice(0,10),status:decision.status,confidence:decision.confidence,journey_count:journeyCount,distinct_user_count:distinctUserCount,accepted_sample_count:acceptedSampleCount,total_duration_seconds:totalDurationSeconds,violation_journey_count:violationJourneyCount,violation_episode_count:violationEpisodeCount,independent_reporter_count:independentReporterCount,outlier_count:outlierCount,weighted_speed_kph:weightedSpeedKph,reasons:decision.reasons,thresholds:ROLLUP_THRESHOLDS,deterministic_summary:fallback,ai_summary:summary.text,ai_status:summary.status,computed_at:new Date().toISOString()};
+    const {data:previous}=await db.from('agency_safety_rollups').select('status').eq('agency_id',agency.id).eq('period',period).eq('period_start',row.period_start).maybeSingle();
+    const write=await db.from('agency_safety_rollups').upsert(row,{onConflict:'agency_id,period,period_start'}).select('*').single();
+    const saved=ensure(write.data,write.error);
+    if(period==='daily'&&decision.status!=='insufficient_evidence'&&previous?.status!==decision.status){
+      const {data:users}=await db.from('users').select('id').is('disabled_at',null);
+      const eventKey=`agency:${agency.id}:${row.period_start}:${decision.status}`;
+      if(users?.length)await db.from('user_notifications').upsert(users.map(user=>({user_id:user.id,event_key:eventKey,type:decision.status==='trusted'?'agency_trusted':'agency_avoid',title:decision.status==='trusted'?`${agency.name} entered the trusted list`:`${agency.name} entered the avoid list`,body:fallback,data:{agencyId:agency.id,period,periodStart:row.period_start,status:decision.status}})),{onConflict:'user_id,event_key',ignoreDuplicates:true});
+    }
+    results.push(saved);
+  }
+  return results;
 }
 function journeyRow(body:Record<string,unknown>, userId:number) {
   return {
@@ -182,6 +274,12 @@ async function handle(req:Request):Promise<Response> {
     if(error||!data||(data.expires_at&&Date.parse(data.expires_at)<=Date.now()))throw new ApiError(404,'Public report not found','not_found');
     return json(req,{slug:data.slug,snapshot:data.snapshot,createdAt:data.created_at,expiresAt:data.expires_at});
   }
+  if(path==='/api/safety/rollups/run'&&method==='POST'){
+    if(!SCHEDULER_SECRET||req.headers.get('authorization')!==`Bearer ${SCHEDULER_SECRET}`)throw new ApiError(401,'Scheduler authentication required','unauthorized');
+    const results=await computeAgencyRollups();
+    await audit(null,'scheduled_rollup','agency_safety_rollup',undefined,{count:results.length});
+    return json(req,{ok:true,computed:results.length,computedAt:new Date().toISOString()});
+  }
   if(path==='/api/auth/register'&&method==='POST'){
     const body=await bodyJson(req),phone=normalizePhone(body.phone),pin=requireString(body.pin,'pin',4,12),secret=requireString(body.secretWord,'secretWord',3,100),birth=optionalNumber(body.birthYear,'birthYear',1900,new Date().getUTCFullYear());
     const pinSalt=randomToken(16),secretSalt=randomToken(16),iterations=210000;
@@ -213,9 +311,76 @@ async function handle(req:Request):Promise<Response> {
   if(path==='/api/profile'&&method==='PATCH'){const body=await bodyJson(req),update:any={};if(body.displayName!==undefined)update.display_name=requireString(body.displayName,'displayName',2,80);if(body.phone!==undefined)update.phone=normalizePhone(body.phone);const {data,error}=await db.from('users').update(update).eq('id',identity.user.id).select('id,phone,display_name,birth_year,role,photo_path').single();if(error?.code==='23505')throw new ApiError(409,'Phone already in use');await audit(identity,'update','profile',identity.user.id);return json(req,profile(ensure(data,error)));}
   if(path==='/api/profile/photo'&&method==='POST'){const form=await req.formData(),file=form.get('photo');if(!(file instanceof File))throw new ApiError(400,'photo file is required');if(file.size>2097152||!['image/jpeg','image/png','image/webp'].includes(file.type))throw new ApiError(400,'Photo must be JPEG, PNG or WebP and no larger than 2 MB');const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[file.type];const objectPath=`${identity.user.id}/${randomToken(12)}.${ext}`;const {error}=await db.storage.from('profile-photos').upload(objectPath,file,{contentType:file.type,upsert:false});ensure(null,error);await db.from('users').update({photo_path:objectPath}).eq('id',identity.user.id);const signed=await db.storage.from('profile-photos').createSignedUrl(objectPath,3600);return json(req,{photoPath:objectPath,photoUrl:signed.data?.signedUrl??null});}
   if(path==='/api/sync'&&(method==='GET'||method==='POST')){if(method==='GET')return json(req,{contractVersion:CONTRACT_VERSION,snapshot:await snapshot(identity,url.searchParams.get('since')??undefined),persistence:{durable:true,adapter:'supabase-postgres',message:'Durably synchronized with Supabase.'}});const body=await bodyJson(req);if(body.operation==='pull')return json(req,{contractVersion:CONTRACT_VERSION,snapshot:await snapshot(identity,String(body.since??'')||undefined),persistence:{durable:true,adapter:'supabase-postgres',message:'Durable pull completed.'}});if(body.operation!=='merge'&&body.operation!=='push')throw new ApiError(400,'Expected sync merge, push, or pull operation');const collections=(body.snapshot as any)?.collections??body.collections;if(!collections||typeof collections!=='object')throw new ApiError(400,'Snapshot collections are required');const result=await idempotent(identity,req,path,body,async()=>{for(const item of collections.journeys??[]){await upsertOwned('journeys',journeyRow(item,identity.user.id),'user_id',identity.user.id);}for(const item of collections.incidents??[]){await upsertOwned('incidents',incidentRow(item,identity.user.id),'reporter_user_id',identity.user.id);}if(identity.user.role==='admin'){for(const item of collections.agencies??[]){await db.from('agencies').upsert({stable_id:String(item.stableId??item.id),name:item.name,type:item.type??null,region:item.region??null,contact:item.phone??item.contact??null,safety_score:Number(item.safetyScore??item.score??0),verified:Boolean(item.verified??item.trusted),metadata:item.metadata??{}},{onConflict:'stable_id'});}for(const item of collections.speedLimits??[]){const mode=String(item.mode??item.vehicle_type??item.id);const limit=Number(item.limitKph??item.limit_kmh??item.limit);if(mode&&Number.isFinite(limit))await db.from('speed_limits').upsert({stable_id:String(item.stableId??item.id??`speed-${mode}`),mode,limit_kph:limit},{onConflict:'mode'});}}await db.from('sync_state').upsert({user_id:identity.user.id,last_push_at:new Date().toISOString(),revision:Date.now()});return{status:200,body:{contractVersion:CONTRACT_VERSION,snapshot:await snapshot(identity),persistence:{durable:true,adapter:'supabase-postgres',message:'Durably synchronized with Supabase.'}}};});return json(req,result.body,result.status);}
+  if(path==='/api/journeys/complete-safety'&&method==='POST'){
+    const body=await bodyJson(req);
+    const result=await idempotent(identity,req,path,body,async()=>{
+      const input=(body.journey&&typeof body.journey==='object'?body.journey:body) as Record<string,unknown>;
+      const journey=await upsertOwned('journeys',journeyRow({...input,status:'active'},identity.user.id),'user_id',identity.user.id);
+      const {data:limitRow,error:limitError}=await db.from('speed_limits').select('limit_kph').eq('mode',String(journey.mode||'car')).is('deleted_at',null).single();
+      const analysis=await assessJourneySamples(String(journey.stable_id),Array.isArray(body.samples)?body.samples as any[]:[],Number(ensure(limitRow,limitError).limit_kph));
+      const update={endTime:input.endTime??new Date().toISOString(),maxSpeed:analysis.assessment.peakSpeedKph,averageSpeed:analysis.assessment.averageSpeedKph,distance:Number(input.distance??input.distanceKm??0)};
+      const {data,error}=await db.rpc('finalize_journey_safety',{p_actor_user_id:identity.user.id,p_journey_id:journey.id,p_journey_update:update,p_samples:analysis.samples,p_episodes:analysis.episodes,p_assessment:analysis.assessment});
+      const assessment=ensure(data,error);
+      const summary=await writeOptionalSummary({...analysis.assessment,period:'journey'},String(analysis.assessment.deterministicSummary));
+      await db.from('journey_safety_assessments').update({ai_summary:summary.text,ai_status:summary.status}).eq('journey_id',journey.id);
+      await db.from('speed_board_entries').update({summary:summary.text}).eq('journey_id',journey.id);
+      return {status:200,body:{assessment:{...camel(assessment),aiSummary:summary.text,aiStatus:summary.status},episodes:analysis.episodes,published:true}};
+    });
+    return json(req,result.body,result.status);
+  }
+  if(path==='/api/speed-board'&&method==='GET'){
+    const {data,error}=await db.from('speed_board_entries').select('id,result_type,published_at,evidence,summary,agencies(name,region),journeys(stable_id,mode,vehicle_details)').eq('active',true).order('published_at',{ascending:false}).limit(200);
+    return json(req,ensure(data,error).map(formatSpeedBoardEntry));
+  }
+  if(path==='/api/speed-reports'&&method==='POST'){
+    const body=await bodyJson(req),agencyId=Math.round(optionalNumber(body.agencyId,'agencyId',1,Number.MAX_SAFE_INTEGER)??0);
+    const observedAt=new Date(String(body.observedAt??new Date().toISOString()));
+    if(!Number.isFinite(observedAt.getTime()))throw new ApiError(400,'observedAt is invalid');
+    const {data:agency}=await db.from('agencies').select('id').eq('id',agencyId).is('deleted_at',null).maybeSingle();
+    if(!agency)throw new ApiError(404,'Agency not found');
+    const stableId=await stableUuid('speed-report-v1',String(body.stableId??`${identity.user.id}:${agencyId}:${observedAt.toISOString()}`));
+    const bucket=new Date(observedAt);bucket.setUTCMinutes(0,0,0);
+    const reportMode=choice(body.mode,['car','bus','lorry','motorbike'],'car');
+    const {data:reportLimit,error:reportLimitError}=await db.from('speed_limits').select('limit_kph').eq('mode',reportMode).is('deleted_at',null).single();
+    const row={stable_id:stableId,reporter_user_id:identity.user.id,agency_id:agencyId,journey_id:body.journeyId??null,vehicle_fingerprint:body.vehicleFingerprint?String(body.vehicleFingerprint).trim().toUpperCase().slice(0,80):null,observed_at:observedAt.toISOString(),report_bucket:bucket.toISOString(),reported_speed_kph:optionalNumber(body.speedKph,'speedKph',0,300),speed_limit_kph:Number(ensure(reportLimit,reportLimitError).limit_kph),route:body.route?String(body.route).slice(0,160):null};
+    const {data,error}=await db.from('speed_reports').upsert(row,{onConflict:'stable_id'}).select('*').single();
+    const saved=ensure(data,error);
+    const from=new Date(observedAt.getTime()-15*60000).toISOString(),to=new Date(observedAt.getTime()+15*60000).toISOString();
+    const {data:episode}=await db.from('violation_episodes').select('id,average_speed_kph').eq('agency_id',agencyId).gte('started_at',from).lte('started_at',to).order('started_at',{ascending:false}).limit(1).maybeSingle();
+    let correlation=null;
+    if(episode){
+      const {data:reports}=await db.from('speed_reports').select('reporter_user_id,reported_speed_kph').eq('agency_id',agencyId).gte('observed_at',from).lte('observed_at',to);
+      const robust=robustWeightedSpeed(Number(episode.average_speed_kph),(reports??[]).map(item=>({reporterId:item.reporter_user_id,speedKph:Number(item.reported_speed_kph)})));
+      const write=await db.from('evidence_correlations').upsert({episode_id:episode.id,telemetry_value_kph:Number(episode.average_speed_kph),independent_reporter_count:robust.independentReporterCount,robust_speed_kph:robust.valueKph,outlier_count:robust.outlierCount,capped_report_count:robust.cappedReportCount,details:robust.details},{onConflict:'episode_id'}).select('*').single();
+      correlation=ensure(write.data,write.error);
+    }
+    await audit(identity,'create','speed_report',saved.id,{correlatedEpisodeId:episode?.id??null});
+    return json(req,{report:camel(saved),correlation:correlation?camel(correlation):null},201);
+  }
+  if(path==='/api/notifications'&&method==='GET'){
+    const {data,error}=await db.from('user_notifications').select('*').eq('user_id',identity.user.id).order('created_at',{ascending:false}).limit(50);
+    return json(req,ensure(data,error).map(camel));
+  }
+  const notificationMatch=path.match(/^\/api\/notifications\/([0-9a-f-]{36})\/read$/);
+  if(notificationMatch&&method==='PATCH'){
+    const {data,error}=await db.from('user_notifications').update({read_at:new Date().toISOString()}).eq('id',notificationMatch[1]).eq('user_id',identity.user.id).select('*').maybeSingle();
+    if(error||!data)throw new ApiError(404,'Notification not found');
+    return json(req,camel(data));
+  }
+  if(path==='/api/admin/safety-rollups'&&method==='POST'){
+    admin(identity);const body=await bodyJson(req);
+    const periods=body.period&&['daily','weekly','monthly'].includes(String(body.period))?[String(body.period) as 'daily'|'weekly'|'monthly']:undefined;
+    const results=await computeAgencyRollups(periods);
+    await audit(identity,'compute','agency_safety_rollup',undefined,{count:results.length});
+    return json(req,{computed:results.length,rollups:results.map(camel)});
+  }
+  if(path==='/api/agency-safety-rollups'&&method==='GET'){
+    const {data,error}=await db.from('agency_safety_rollups').select('*,agencies(name,region)').order('period_start',{ascending:false}).limit(200);
+    return json(req,ensure(data,error).map(camel));
+  }
   if(path==='/api/journeys'&&method==='POST'){const body=await bodyJson(req);const result=await idempotent(identity,req,path,body,async()=>{const {data,error}=await db.from('journeys').insert(journeyRow(body,identity.user.id)).select('*').single();const value=formatJourney(ensure(data,error));await audit(identity,'create','journey',value.id);return{status:201,body:value};});return json(req,result.body,result.status);}
   if(path==='/api/journeys'&&method==='GET'){const {data,error}=await db.from('journeys').select('*').eq('user_id',identity.user.id).is('deleted_at',null).order('start_time',{ascending:false});return json(req,ensure(data,error).map(formatJourney));}
-  let match=path.match(/^\/api\/journeys\/(\d+)$/);if(match&&method==='PATCH'){const body=await bodyJson(req),id=Number(match[1]);const allowed:any={};const map:any={status:'status',endTime:'end_time',maxSpeed:'max_speed',avgSpeed:'avg_speed',distance:'distance',violationCount:'violation_count',score:'score',path:'path',updatedAt:'client_updated_at',version:'version'};for(const [key,column]of Object.entries(map))if(body[key]!==undefined)allowed[column as string]=key==='path'?parseJsonValue(body[key],[]):body[key];let query=db.from('journeys').update(allowed).eq('id',id);if(identity.user.role!=='admin')query=query.eq('user_id',identity.user.id);const {data,error}=await query.select('*').maybeSingle();if(error||!data)throw new ApiError(404,'Journey not found');return json(req,formatJourney(data));}
+  let match=path.match(/^\/api\/journeys\/(\d+)$/);if(match&&method==='PATCH'){const body=await bodyJson(req),id=Number(match[1]);const result=await idempotent(identity,req,path,body,async()=>{const allowed:any={};const map:any={status:'status',endTime:'end_time',maxSpeed:'max_speed',avgSpeed:'avg_speed',distance:'distance',violationCount:'violation_count',score:'score',path:'path',updatedAt:'client_updated_at',version:'version'};for(const [key,column]of Object.entries(map))if(body[key]!==undefined)allowed[column as string]=key==='path'?parseJsonValue(body[key],[]):body[key];let query=db.from('journeys').update(allowed).eq('id',id);if(identity.user.role!=='admin')query=query.eq('user_id',identity.user.id);const {data,error}=await query.select('*').maybeSingle();if(error||!data)throw new ApiError(404,'Journey not found');return{status:200,body:formatJourney(data)};});return json(req,result.body,result.status);}
   match=path.match(/^\/api\/journeys\/user\/(\d+)$/);if(match&&method==='GET'){const userId=Number(match[1]);if(userId!==identity.user.id)admin(identity);const {data,error}=await db.from('journeys').select('*').eq('user_id',userId).is('deleted_at',null).order('start_time',{ascending:false});return json(req,ensure(data,error).map(formatJourney));}
   if(path==='/api/incidents'&&method==='GET'){let q=db.from('incidents').select('*').is('deleted_at',null).order('updated_at',{ascending:false});if(identity.user.role!=='admin')q=q.eq('status','active');const {data,error}=await q.limit(500);return json(req,ensure(data,error).map(formatIncident));}
   if(path==='/api/incidents'&&method==='POST'){const body=await bodyJson(req);const result=await idempotent(identity,req,path,body,async()=>{const row=incidentRow(body,identity.user.id);if(row.lat===null||row.lng===null)throw new ApiError(400,'lat and lng are required');const {data,error}=await db.from('incidents').insert(row).select('*').single();const value=formatIncident(ensure(data,error));return{status:201,body:value};});return json(req,result.body,result.status);}

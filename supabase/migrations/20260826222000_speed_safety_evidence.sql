@@ -1,0 +1,5 @@
+-- Reserved compatibility migration.
+--
+-- The complete evidence schema is defined by the following
+-- 20260826223000_safety_intelligence.sql migration. This intentionally contains
+-- no DDL, so it adds no schema and cannot overlap the canonical migration.

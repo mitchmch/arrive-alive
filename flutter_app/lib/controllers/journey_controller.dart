@@ -2,9 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:uuid/uuid.dart';
 
 import '../core/config.dart';
+import '../models/journey_evidence_summary.dart';
+import '../models/speed_sample.dart';
+import '../models/violation_episode.dart';
 import '../services/location_service.dart';
+import '../services/speed_limit_service.dart';
 import '../services/sync_service.dart';
 
 class JourneyState {
@@ -28,6 +33,8 @@ class JourneyState {
   final Duration duration;
   final List<Map<String, double>> path;
   final bool isViolating;
+  final double speedLimit;
+  final int sampleCount;
 
   JourneyState({
     this.mode,
@@ -50,6 +57,8 @@ class JourneyState {
     this.duration = Duration.zero,
     this.path = const [],
     this.isViolating = false,
+    this.speedLimit = AppConfig.defaultSpeedLimit,
+    this.sampleCount = 0,
   });
 
   JourneyState copyWith({
@@ -73,6 +82,8 @@ class JourneyState {
     Duration? duration,
     List<Map<String, double>>? path,
     bool? isViolating,
+    double? speedLimit,
+    int? sampleCount,
   }) =>
       JourneyState(
         mode: mode ?? this.mode,
@@ -95,6 +106,8 @@ class JourneyState {
         duration: duration ?? this.duration,
         path: path ?? this.path,
         isViolating: isViolating ?? this.isViolating,
+        speedLimit: speedLimit ?? this.speedLimit,
+        sampleCount: sampleCount ?? this.sampleCount,
       );
 }
 
@@ -103,12 +116,19 @@ class JourneyController extends StateNotifier<JourneyState> {
   Position? _lastPosition;
   DateTime? _startTime;
   Timer? _durationTimer;
-  int _speedReadingsAbove = 0;
   int _movingReadings = 0;
   int _stationaryReadings = 0;
   final SyncService _syncService = SyncService();
+  final _uuid = const Uuid();
+  late SpeedEvidenceTracker _evidenceTracker;
+  Future<JourneyEvidenceSummary>? _stopFuture;
+  Future<void> _evidenceWrites = Future.value();
 
-  JourneyController() : super(JourneyState());
+  JourneyController() : super(JourneyState()) {
+    _evidenceTracker = SpeedEvidenceTracker(
+      requiredReadings: AppConfig.violationReadingsThreshold,
+    );
+  }
 
   void setMode(String mode) => state = state.copyWith(mode: mode);
 
@@ -163,6 +183,13 @@ class JourneyController extends StateNotifier<JourneyState> {
     _lastPosition = null;
     _movingReadings = 0;
     _stationaryReadings = 0;
+    _evidenceTracker.reset();
+    _stopFuture = null;
+    _evidenceWrites = Future.value();
+
+    // Freeze the latest admin-configured limit for the whole journey so every
+    // sample and episode is evaluated against the same auditable value.
+    final speedLimit = await SpeedLimitService.getLimitForMode(state.mode!);
 
     // Create journey offline-first via SyncService
     final localId = await _syncService.createJourneyLocal({
@@ -182,10 +209,16 @@ class JourneyController extends StateNotifier<JourneyState> {
       isMoving: false,
       currentSpeed: 0,
       isViolating: false,
+      speedLimit: speedLimit,
+      sampleCount: 0,
+      violationCount: 0,
+      maxSpeed: 0,
+      distance: 0,
+      duration: Duration.zero,
+      path: const [],
     );
 
     _startTime = DateTime.now();
-    _speedReadingsAbove = 0;
 
     // Start duration timer
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -241,7 +274,7 @@ class JourneyController extends StateNotifier<JourneyState> {
 
     final speed = isMoving ? rawSpeed : 0.0;
     final maxSpeed = speed > state.maxSpeed ? speed : state.maxSpeed;
-    final limit = AppConfig.speedLimits[state.mode] ?? 90;
+    final limit = state.speedLimit;
     final isViolating = isMoving && speed > limit;
 
     final nextPath = isMoving
@@ -253,14 +286,26 @@ class JourneyController extends StateNotifier<JourneyState> {
     final nextDistance =
         isMoving && distDelta > 0 ? state.distance + distDelta : state.distance;
 
-    if (isViolating) {
-      _speedReadingsAbove++;
-      if (_speedReadingsAbove >= AppConfig.violationReadingsThreshold) {
-        _recordViolation(position, speed, limit);
-        _speedReadingsAbove = 0;
+    final journeyLocalId = state.journeyLocalId;
+    if (journeyLocalId != null) {
+      final sample = SpeedSample(
+        localId: _uuid.v4(),
+        journeyLocalId: journeyLocalId,
+        journeyId: state.journeyId,
+        recordedAt: DateTime.now(),
+        speed: speed,
+        speedLimit: limit,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        isMoving: isMoving,
+      );
+      _evidenceWrites = _evidenceWrites
+          .then((_) => _syncService.createSpeedSampleLocal(sample));
+      final completedEpisode = _evidenceTracker.add(sample);
+      if (completedEpisode != null) {
+        _recordViolationEpisode(completedEpisode);
       }
-    } else {
-      _speedReadingsAbove = 0;
     }
 
     state = state.copyWith(
@@ -274,31 +319,39 @@ class JourneyController extends StateNotifier<JourneyState> {
       distance: nextDistance,
       path: nextPath,
       isViolating: isViolating,
+      violationCount: _evidenceTracker.episodeCount,
+      sampleCount: state.sampleCount + 1,
     );
   }
 
-  void _recordViolation(Position pos, double speed, double limit) {
+  void _recordViolationEpisode(ViolationEpisode episode) {
     final reg = state.vehicleDetails['reg'] ?? '';
-    if (reg.isEmpty) return;
-
-    // Create violation offline-first
-    _syncService.createViolationLocal(
-      journeyLocalId: state.journeyLocalId ?? '',
-      journeyRemoteId: state.journeyId,
-      vehicleReg: reg,
-      mode: state.mode ?? 'car',
-      agencyId: state.agencyId,
-      speed: speed,
-      speedLimit: limit,
-      lat: pos.latitude,
-      lng: pos.longitude,
-      reportCount: _speedReadingsAbove,
+    _evidenceWrites = _evidenceWrites.then(
+      (_) => _syncService.createViolationLocal(
+        journeyLocalId: state.journeyLocalId ?? '',
+        journeyRemoteId: state.journeyId,
+        vehicleReg: reg.toString(),
+        mode: state.mode ?? 'car',
+        agencyId: state.agencyId,
+        speed: episode.peakSpeed,
+        speedLimit: episode.speedLimit,
+        lat: episode.latitude,
+        lng: episode.longitude,
+        reportCount: episode.sampleCount,
+        episode: episode,
+      ),
     );
-
-    state = state.copyWith(violationCount: state.violationCount + 1);
   }
 
-  Future<void> stopRecording() async {
+  Future<JourneyEvidenceSummary> stopRecording() {
+    return _stopFuture ??= _stopRecordingOnce();
+  }
+
+  Future<JourneyEvidenceSummary> _stopRecordingOnce() async {
+    final localId = state.journeyLocalId;
+    if (localId == null) {
+      throw StateError('No active journey to end');
+    }
     _positionSub?.cancel();
     _durationTimer?.cancel();
     LocationService().stopTracking();
@@ -308,23 +361,38 @@ class JourneyController extends StateNotifier<JourneyState> {
     _movingReadings = 0;
     _stationaryReadings = 0;
 
-    final score = state.violationCount == 0
-        ? 100
-        : (100 - state.violationCount * 15).clamp(0, 100);
+    final finalEpisode = _evidenceTracker.finish(DateTime.now());
+    if (finalEpisode != null) {
+      _recordViolationEpisode(finalEpisode);
+    }
+    await _evidenceWrites;
+    final violationCount = _evidenceTracker.episodeCount;
+    final score =
+        violationCount == 0 ? 100 : (100 - violationCount * 15).clamp(0, 100);
+    final summary = JourneyEvidenceSummary(
+      journeyLocalId: localId,
+      violationCount: violationCount,
+      sampleCount: state.sampleCount,
+      maxSpeed: state.maxSpeed,
+      speedLimit: state.speedLimit,
+      distanceMeters: state.distance,
+      duration: state.duration,
+      score: score,
+      queuedForSync: true,
+    );
 
     // Complete the journey offline-first
-    if (state.journeyLocalId != null) {
-      await _syncService.completeJourneyLocal(
-        state.journeyLocalId!,
-        maxSpeed: state.maxSpeed,
-        distance: state.distance,
-        violationCount: state.violationCount,
-        score: score,
-        path: state.path,
-      );
-    }
+    await _syncService.completeJourneyLocal(
+      localId,
+      maxSpeed: state.maxSpeed,
+      distance: state.distance,
+      violationCount: violationCount,
+      score: score,
+      path: state.path,
+    );
 
     state = JourneyState();
+    return summary;
   }
 
   @override

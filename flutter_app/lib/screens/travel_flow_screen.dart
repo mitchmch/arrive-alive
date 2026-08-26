@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme.dart';
 import '../core/config.dart';
 import '../controllers/journey_controller.dart';
+import '../controllers/scoreboard_controller.dart';
 import 'access_screen.dart';
 import 'journey_screen.dart';
 
@@ -22,7 +23,7 @@ class _TravelFlowScreenState extends ConsumerState<TravelFlowScreen> {
   final _driverName = TextEditingController();
   final _passengers = TextEditingController(text: '1');
   String? _vehicleType;
-  String? _agency;
+  int? _agencyId;
   final _customDefect = TextEditingController();
 
   static const _modeLabels = {
@@ -80,6 +81,7 @@ class _TravelFlowScreenState extends ConsumerState<TravelFlowScreen> {
     journey.setVehicleDetails(vehicleDetails);
     journey.setDriverName(_driverName.text.trim());
     journey.setPassengerCount(int.tryParse(_passengers.text) ?? 1);
+    if (_agencyId != null) journey.setAgencyId(_agencyId!);
 
     Navigator.push(
       context,
@@ -245,50 +247,34 @@ class _TravelFlowScreenState extends ConsumerState<TravelFlowScreen> {
           onChanged: (v) => setState(() => _vehicleType = v),
         ),
         const SizedBox(height: 16),
-        if (mode == 'bus') ...[
-          DropdownButtonFormField<String>(
-            initialValue: _agency,
-            decoration: const InputDecoration(labelText: 'Agency'),
-            items: const [
-              DropdownMenuItem(
-                value: 'Amour Mezam',
-                child: Text('Amour Mezam'),
+        ref.watch(agenciesProvider).when(
+              data: (agencies) => DropdownButtonFormField<int>(
+                initialValue: _agencyId,
+                decoration: const InputDecoration(
+                  labelText: 'Travel Agency (optional)',
+                  helperText:
+                      'Leave blank for an independent or private vehicle.',
+                ),
+                items: agencies
+                    .map(
+                      (agency) => DropdownMenuItem(
+                        value: agency.id,
+                        child: Text(agency.name),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => _agencyId = value),
               ),
-              DropdownMenuItem(
-                value: 'Guarantee Express',
-                child: Text('Guarantee Express'),
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => Text(
+                'Agency list unavailable. Continue as an independent vehicle.',
+                style: GoogleFonts.dmSans(
+                  fontSize: 13,
+                  color: AppTheme.textMuted,
+                ),
               ),
-              DropdownMenuItem(
-                value: 'General Express',
-                child: Text('General Express'),
-              ),
-              DropdownMenuItem(
-                value: 'Touristique Express',
-                child: Text('Touristique Express'),
-              ),
-              DropdownMenuItem(value: 'Budem', child: Text('Budem')),
-              DropdownMenuItem(
-                value: 'Meta Express',
-                child: Text('Meta Express'),
-              ),
-              DropdownMenuItem(
-                value: 'Comfort Express',
-                child: Text('Comfort Express'),
-              ),
-              DropdownMenuItem(
-                value: 'Bantu Express',
-                child: Text('Bantu Express'),
-              ),
-              DropdownMenuItem(
-                value: 'Vatican Express',
-                child: Text('Vatican Express'),
-              ),
-              DropdownMenuItem(value: 'Bagungu', child: Text('Bagungu')),
-            ],
-            onChanged: (v) => setState(() => _agency = v),
-          ),
-          const SizedBox(height: 16),
-        ],
+            ),
+        const SizedBox(height: 16),
         TextField(
           controller: _reg,
           decoration: const InputDecoration(

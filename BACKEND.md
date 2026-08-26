@@ -7,6 +7,7 @@ This directory contains a production-oriented Supabase data plane. It was create
 - `supabase/migrations/20260826190000_durable_backend.sql` creates normalized durable tables, indexes, version/timestamp metadata, idempotency state, a transactional incident-confirmation RPC, an audit log, and a private `profile-photos` bucket.
 - Every application table has RLS enabled and no permissive `anon` or `authenticated` policies. Direct browser/mobile database access is intentionally denied. Only the `app-api` Edge Function uses the service role.
 - `supabase/functions/app-api/index.ts` exposes the REST contract used by Flutter plus `/api/sync` snapshot pull/push/merge for the web repository.
+- `supabase/migrations/20260826223000_safety_intelligence.sql` adds immutable speed samples, deterministic assessments and agency rollups, Speed Board entries, and deduplicated user notifications. Flutter details are documented in `flutter_app/SPEED_SAFETY_API_CONTRACT.md`.
 - `api/sync.js` is a narrow Vercel proxy to `/api/sync`; it returns an honest 503 when `SUPABASE_APP_API_URL` is absent and never keeps process-memory data.
 
 ## Required environment variables
@@ -18,6 +19,9 @@ SUPABASE_URL=https://PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...             # server-side Edge secret only
 APP_ALLOWED_ORIGINS=https://arrive-alive-virid.vercel.app,https://cp.arrivealive.app
 APP_SESSION_TTL_DAYS=30                   # optional, clamped to 1-90
+OPENAI_API_KEY=...                        # optional; server-side summaries only
+OPENAI_SUMMARY_MODEL=gpt-5-mini           # optional
+SAFETY_SCHEDULER_SECRET=...               # required by the rollup scheduler route
 ```
 
 Vercel:
@@ -56,7 +60,63 @@ Profile photos are private, limited to JPEG/PNG/WebP and 2 MB, stored under a pe
 
 Public before custom session authentication: `GET /health`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/reset-pin`, and read-only `GET /api/public-reports/:slug`.
 
-Authenticated: profile/logout, `/api/sync`, journeys, incidents/confirmation, violations, agencies, and speed limits. Administrative: users, stats/overview, violation moderation/reports, speed-limit settings, public report publishing, and `/api/admin/sync-health`. Ownership is enforced on personal journeys and violations. Apart from a single slug-addressed sanitized snapshot, public-looking data routes still require a valid app session to limit anonymous bulk access.
+Authenticated: profile/logout, `/api/sync`, journeys and atomic safety completion, Speed Board, agency rollups, speed reports, notifications, incidents/confirmation, violations, agencies, and speed limits. Administrative: users, stats/overview, violation moderation/reports, speed-limit settings, rollup execution, public report publishing, and `/api/admin/sync-health`. Ownership is enforced on personal journeys, samples, and violations. Apart from a single slug-addressed sanitized snapshot, public-looking data routes still require a valid app session to limit anonymous bulk access.
+
+## Deterministic safety intelligence
+
+Apply `20260826223000_safety_intelligence.sql` after the durable-backend
+migrations. It creates the speed-sample table and adds violation episodes,
+independent reports, evidence correlations, journey assessments, Speed Board
+entries, agency rollups, notifications, RLS, and the atomic completion RPC.
+`20260826222000_speed_safety_evidence.sql` is an intentionally empty
+compatibility placeholder and adds no overlapping schema.
+
+The Edge Function always loads the current admin-managed limit for the journey
+mode. It rejects implausible samples (over 220 km/h), invalid timestamps, and
+location accuracy worse than 65 metres while retaining each rejection reason.
+A violation episode requires speed above `limit + 2 km/h` for at least three
+accepted samples or two seconds; gaps over ten seconds split episodes.
+Completing a journey writes samples, episodes, the assessment, the journey
+status, an audit event, and one `violator` or `within_limit` Speed Board entry
+through an idempotent transaction.
+
+Independent reports are unique per reporter, agency, vehicle, and UTC-hour
+bucket. Correlation anchors telemetry at weight `1.0`, weights each unique
+reporter at `0.35`, caps total report influence, limits each report to ±25
+km/h of telemetry, and applies median/MAD winsorization. Outlier and capped
+counts are recorded rather than discarded silently.
+
+Agency rollups are computed daily, weekly, and monthly. A label requires at
+least 10 journeys, five distinct users, and 3,600 seconds of telemetry.
+`avoid` additionally requires at least three violating journeys and a 20%
+violation-journey rate. `trusted` requires a rate no greater than 5%.
+Everything else is `insufficient_evidence`. Every row stores the thresholds,
+confidence, and reasons used.
+
+OpenAI is optional and only writes display prose through the server-side
+Responses API. Its input is an allowlist of aggregate numeric facts with no
+names, phones, plates, birth years, precise locations, or other
+personal/protected attributes. The prompt forbids deciding or modifying the
+status. Missing credentials produce `ai_status=fallback`; unavailable or
+invalid responses produce `ai_status=failed`; both use the deterministic
+summary. No successful OpenAI call is assumed.
+
+Safety routes:
+
+- `POST /api/journeys/complete-safety` — authenticated, idempotent completion
+  and automatic board publication.
+- `GET /api/speed-board` and `GET /api/agency-safety-rollups` — registered-user
+  evidence feeds.
+- `POST /api/speed-reports` — deduplicated independent observations and
+  correlation.
+- `GET /api/notifications` and
+  `PATCH /api/notifications/:uuid/read` — deduplicated personal feed.
+- `POST /api/admin/safety-rollups` — administrator-triggered computation.
+- `POST /api/safety/rollups/run` — scheduler-only route using
+  `Authorization: Bearer $SAFETY_SCHEDULER_SECRET`.
+
+Schedule the last route daily. Re-runs are safe because rollups upsert by
+agency/period/start date and notifications have unique event keys.
 
 ## Local checks
 
