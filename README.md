@@ -1,6 +1,6 @@
 # Arrive Alive
 
-Arrive Alive is a responsive road-safety web application for journey recording, live GPS speed monitoring, community hazard reporting, and driver safety feedback. The application runs as a static web app and uses MapLibre GL JS with CARTO vector maps.
+Arrive Alive is a responsive road-safety web application for journey recording, live GPS speed monitoring, community hazard reporting, and driver safety feedback. The web client remains a no-build application and uses Mapbox GL first, with MapLibre/OpenStreetMap fallbacks.
 
 ## Features
 
@@ -13,17 +13,33 @@ Arrive Alive is a responsive road-safety web application for journey recording, 
 - Realtime-style hazard reporting with pinned locations
 - Proximity warnings and “Still there” or “Not there” hazard confirmation
 - Journey stopping, restarting, completion, history, scoreboard, and reporting flows
+- Profile photos with client-side type/size validation and accessible preview
+- Per-account journey history
+- Role-gated administration for users, reports, agencies, speed limits, and sync health
+- API-first repository synchronization with explicit local fallback
 
 ## Project structure
 
 ```text
-arrive_alive_demo/
-├── index.html   # Application markup, styles, and JavaScript
-├── logo.jpg     # Arrive Alive brand asset
-└── README.md    # Setup and deployment documentation
+arrive-alive/
+├── api/
+│   ├── mapbox-config.js # Public Mapbox runtime configuration
+│   └── sync.js          # Proxy to the durable Supabase app API
+├── supabase/            # SQL migration and app-api Edge Function
+├── tests/               # Static, repository, and endpoint checks
+├── index.html           # Application markup, styles, and JavaScript
+├── web-repository.js    # Shared API-first data repository
+├── logo.jpg             # Arrive Alive brand asset
+└── README.md            # Setup and deployment documentation
 ```
 
-This version has no build step or backend dependency. It can be served from any static web host.
+This version has no build step. It can be served from a static host; when `/api/sync` is unavailable it safely falls back to browser-local storage and then in-memory state.
+
+## Data architecture and persistence
+
+`web-repository.js` owns the web data contract for public user records, profiles, journeys, incidents, agencies, and speed limits. Every record has an ID, version, creation timestamp, and update timestamp. Snapshot merges use the newest `updatedAt` value, with `version` as the tie-breaker. Writes are local-first and the client then attempts `/api/sync`; the current status is visible in Administration.
+
+`api/sync.js` now proxies only to the configured durable Supabase Edge API. It keeps no process-memory snapshot and returns HTTP 503 when `SUPABASE_APP_API_URL` is absent. The Edge API supplies server-verified opaque sessions, ownership/admin authorization, Postgres persistence, idempotency, audit records, and private profile-photo storage. See `BACKEND.md` for required environment variables and the operator-run setup sequence. When the web API meta tag is empty, authentication remains an explicitly local-only demo and no hard-coded administrator path should be used in production.
 
 ## Requirements
 
@@ -68,7 +84,7 @@ The app uses bundled Mapbox GL JS as its primary map renderer and Mapbox Navigat
 - `mapbox://styles/mapbox/navigation-day-v1`
 - `mapbox://styles/mapbox/navigation-night-v1`
 
-MapLibre GL and OpenStreetMap remain bundled as an automatic fallback. If Mapbox configuration or Mapbox map requests fail, the app switches to OpenStreetMap and then to a limited route canvas instead of blocking the journey screen.
+MapLibre GL and OpenStreetMap remain bundled as an automatic last-resort fallback. A transient Mapbox style failure is retried once before the app switches to OpenStreetMap and then to a limited route canvas. Returning to the journey screen, restoring the tab, retrying, or reloading starts with Mapbox again.
 
 ### Mapbox access token
 
@@ -80,7 +96,7 @@ For Vercel, add the token as an environment variable:
 MAPBOX_ACCESS_TOKEN=pk.your_public_token
 ```
 
-Add it to Production, Preview, and Development, then redeploy the project. The serverless endpoint at `api/mapbox-config.js` supplies the public browser token at runtime without committing it to Git.
+Add it to Production, Preview, and Development, then redeploy the project. The serverless endpoint at `api/mapbox-config.js` supplies the public browser token at runtime. No Mapbox token is committed to the browser or Flutter source.
 
 If the token has URL restrictions, include every hostname from which the app is loaded, for example:
 
@@ -99,7 +115,7 @@ For local Mapbox development, use Vercel's local runtime so the serverless confi
 npx vercel dev
 ```
 
-Running `npx serve` still works, but it intentionally exercises the tokenless OpenStreetMap fallback because it does not run the `/api/mapbox-config` function.
+Running `npx serve` still works for interface development, but Mapbox requires a server that provides `/api/mapbox-config`. Use Vercel development or a compatible local endpoint for full map testing.
 
 ### Day and night maps
 
@@ -158,6 +174,11 @@ Path("/tmp/arrive_alive_inline.js").write_text("\n".join(scripts))
 PY
 
 node --check /tmp/arrive_alive_inline.js
+node --check web-repository.js
+node --check api/sync.js
+node tests/static-web-check.js
+node tests/repository-check.js
+node tests/sync-api-check.js
 ```
 
 ### Authentication E2E checklist
@@ -171,7 +192,7 @@ Verify these flows in a clean browser session:
 5. Login with the correct PIN and confirm navigation to the journey wizard.
 6. Reset the PIN with an incorrect secret word and confirm it is rejected.
 7. Reset with the correct secret word and confirm the new PIN works.
-8. Confirm admin login routes to the scoreboard.
+8. Confirm admin login routes to the protected Administration page.
 9. Confirm guest access routes to the journey wizard.
 
 ### Journey and speed E2E checklist
@@ -282,4 +303,6 @@ Reload the latest version of the application and clear any stale site cache. The
 ## Security notes
 
 - Never commit API secrets, passwords, private keys, or service-account credentials.
-- The current static demo stores application data in browser-managed client state. A production multi-user release should use authenticated backend APIs and a durable database for accounts, incidents, confirmations, journeys, and audit records.
+- The repository attempts the Vercel sync function first and safely retains data locally when it is unavailable, but the included function uses ephemeral process memory only.
+- Browser-local data is scoped to that browser/profile and may be cleared by the user or browser.
+- The demo auth flow is client-side and is not a security boundary. Production requires server-verified sessions and authorization.

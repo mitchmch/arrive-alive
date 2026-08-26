@@ -1,1 +1,12 @@
 .vercel
+*.zip
+__pycache__/
+*.pyc
+*-report-*.txt
+*-update-*.txt
+durable-backend-report-*.txt
+flutter_app/.dart_tool/
+flutter_app/build/
+flutter_app/android/local.properties
+flutter_app/.flutter-plugins-dependencies
+flutter_app/*report*

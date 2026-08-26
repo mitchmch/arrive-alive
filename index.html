@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#4361ee">
 <title>Arrive Alive — Road Safety Cameroon</title>
+<link rel="icon" href="/logo.jpg" type="image/jpeg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
@@ -28,27 +29,27 @@
   --aa-caution:#eb6424;
   --aa-alert:#f9c784;
   --aa-secondary:#b8b8ff;
-  --aa-bg:#F7F6F2;
-  --aa-surface:#F9F8F5;
+  --aa-bg:#F3F6FF;
+  --aa-surface:#F8FAFF;
   --aa-card:#FFFFFF;
-  --aa-text:#28251D;
-  --aa-text-muted:#7A7974;
-  --aa-border:#D4D1CA;
-  --aa-divider:#E4E1DA;
+  --aa-text:#13213C;
+  --aa-text-muted:#5F6F8C;
+  --aa-border:#C9D5F2;
+  --aa-divider:#E0E7F8;
   --aa-blue:#4361ee;
   --aa-cyan:#b8b8ff;
   --aa-yellow:#f9c784;
   --aa-shadow-sm:0 1px 3px rgba(67,97,238,.08);
   --aa-shadow-md:0 4px 16px rgba(67,97,238,.10);
   --aa-shadow-lg:0 12px 40px rgba(67,97,238,.16);
-  --aa-glass-bg:rgba(255,255,255,.72);
+  --aa-glass-bg:rgba(248,250,255,.82);
   --aa-glass-blur:blur(20px);
-  --aa-map-bg:#E9EEF4;
+  --aa-map-bg:#E8EEFC;
 }
 [data-theme="dark"]{
-  --aa-amber:#4361ee;
-  --aa-amber-dark:#3141b5;
-  --aa-amber-light:#5a7fff;
+  --aa-amber:#5A7FFF;
+  --aa-amber-dark:#4361ee;
+  --aa-amber-light:#86A0FF;
   --aa-success:#4CAF50;
   --aa-warning:#eb6424;
   --aa-warning-light:#f9c784;
@@ -57,21 +58,21 @@
   --aa-caution:#eb6424;
   --aa-alert:#f9c784;
   --aa-secondary:#b8b8ff;
-  --aa-bg:#121110;
-  --aa-surface:#1C1B19;
-  --aa-card:#242320;
-  --aa-text:#CDCCCA;
-  --aa-text-muted:#8A8985;
-  --aa-border:#393836;
-  --aa-divider:#2E2D2B;
-  --aa-blue:#5a7fff;
+  --aa-bg:#071126;
+  --aa-surface:#0D1A35;
+  --aa-card:#132342;
+  --aa-text:#EDF3FF;
+  --aa-text-muted:#A8B5CD;
+  --aa-border:#29416B;
+  --aa-divider:#1D3155;
+  --aa-blue:#6F8DFF;
   --aa-cyan:#b8b8ff;
   --aa-yellow:#f9c784;
-  --aa-shadow-sm:0 1px 3px rgba(0,0,0,.3);
-  --aa-shadow-md:0 4px 16px rgba(0,0,0,.4);
-  --aa-shadow-lg:0 12px 40px rgba(0,0,0,.55);
-  --aa-glass-bg:rgba(28,27,25,.72);
-  --aa-map-bg:#0a0a1a;
+  --aa-shadow-sm:0 1px 3px rgba(0,6,20,.32);
+  --aa-shadow-md:0 4px 16px rgba(0,6,20,.42);
+  --aa-shadow-lg:0 12px 40px rgba(0,6,20,.58);
+  --aa-glass-bg:rgba(13,26,53,.82);
+  --aa-map-bg:#050D1E;
 }
 :root{
   --r-card:12px;
@@ -90,7 +91,7 @@ body{
   font-size:16px;
   line-height:1.5;
   color:var(--aa-text);
-  background:#0a0908;
+  background:#050D1E;
   display:flex;align-items:center;justify-content:center;
   overflow:hidden;
 }
@@ -98,12 +99,16 @@ button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
 input,select,textarea{font:inherit;color:inherit}
 ul{list-style:none}
 ::selection{background:rgba(67,97,238,.25)}
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
 
 /* ===== PHONE FRAME ===== */
 #device{
   position:relative;width:390px;height:844px;border-radius:48px;
   background:var(--aa-bg);overflow:hidden;
-  box-shadow:0 0 0 12px #1a1816,0 0 0 14px #2a2725,var(--aa-shadow-lg);
+  box-shadow:0 0 0 12px #09142A,0 0 0 14px #182846,var(--aa-shadow-lg);
   flex-shrink:0;
 }
 @media(max-width:440px),(max-height:880px){
@@ -168,7 +173,6 @@ ul{list-style:none}
 }
 .access-logo img{width:100%;height:100%;object-fit:cover}
 .access-title{font-size:30px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
-.access-sub{font-size:15px;opacity:.9;margin-bottom:48px;max-width:260px}
 .access-actions{width:100%;display:flex;flex-direction:column;gap:12px;max-width:320px}
 .btn{
   height:52px;border-radius:14px;font-weight:600;font-size:16px;
@@ -176,7 +180,7 @@ ul{list-style:none}
   transition:transform .15s var(--ease),opacity .15s;
 }
 .btn:active{transform:scale(.97)}
-.btn-primary{background:#fff;color:var(--aa-amber-dark)}
+.btn-primary{background:var(--aa-amber);color:#fff}
 .btn-ghost{background:rgba(255,255,255,.15);color:#fff;backdrop-filter:blur(4px)}
 .auth-text-link{background:none;border:none;color:var(--aa-primary);text-decoration:underline;padding:4px 8px;font-size:14px;cursor:pointer;box-shadow:none;outline:none;width:auto;min-height:0;border-radius:0;letter-spacing:normal;text-transform:none;font-weight:400;display:inline}
 .btn-outline{background:transparent;border:1.5px solid var(--aa-border);color:var(--aa-text)}
@@ -197,6 +201,7 @@ ul{list-style:none}
 }
 .auth-back svg{width:20px;height:20px}
 .auth-form{width:100%;max-width:320px;display:flex;flex-direction:column;gap:14px}
+.auth-form .btn-primary{background:var(--aa-amber-dark);color:#fff;border:1px solid rgba(255,255,255,.24)}
 .auth-form h2{font-size:24px;font-weight:800;margin-bottom:4px}
 .auth-form p{font-size:14px;opacity:.85;margin-bottom:8px}
 .auth-field{display:flex;flex-direction:column;gap:6px}
@@ -241,6 +246,17 @@ ul{list-style:none}
 .icon-btn:hover,.icon-btn:active{background:var(--aa-divider)}
 .icon-btn svg{width:22px;height:22px}
 .icon-btn.amber-on{background:var(--aa-amber);color:#fff}
+.back-control{
+  width:44px!important;height:44px!important;min-width:44px;min-height:44px;
+  display:flex!important;align-items:center;justify-content:center;flex:0 0 44px;
+  color:var(--aa-text);touch-action:manipulation;
+}
+.back-control svg{
+  display:block!important;width:24px!important;height:24px!important;min-width:24px;min-height:24px;
+  max-width:none;overflow:visible;fill:none;stroke:currentColor!important;stroke-width:2.4;
+  stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;pointer-events:none;
+}
+.auth-back.back-control{color:#fff;background:rgba(255,255,255,.18)}
 
 /* ===== WIZARD ===== */
 .wiz-progress{display:flex;gap:6px;padding:16px 20px 8px}
@@ -296,7 +312,7 @@ ul{list-style:none}
 .wiz-skip{background:transparent;color:var(--aa-text-muted);font-weight:500;font-size:14px;text-decoration:underline}
 
 /* ===== JOURNEY / MAP (Modern Waze-inspired) ===== */
-#screen-wizard,#screen-score,#screen-report{background:var(--aa-bg);color:var(--aa-text)}
+#screen-wizard,#screen-profile,#screen-score,#screen-report,#screen-admin{background:var(--aa-bg);color:var(--aa-text)}
 #screen-journey{background:var(--aa-map-bg)}
 #map{position:absolute;inset:0;z-index:1;width:100%;height:100%;min-width:1px;min-height:1px;background:var(--aa-map-bg)}
 .maplibregl-canvas,.mapboxgl-canvas{outline:none}
@@ -362,7 +378,7 @@ ul{list-style:none}
 .speed-limit-badge .sl-label{font-size:7px;font-weight:700;text-transform:uppercase;color:var(--aa-destructive);margin-top:1px}
 
 /* === Floating action buttons (modern) === */
-.fab-stack{position:absolute;right:14px;bottom:calc(var(--journey-dock-height,108px) + 14px);display:flex;flex-direction:column;gap:8px;z-index:16}
+.fab-stack{position:absolute;right:14px;bottom:calc(var(--journey-dock-height,108px) + 14px);display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:16}
 .fab{
   width:48px;height:48px;border-radius:50%;
   background:var(--aa-glass-bg);backdrop-filter:var(--aa-glass-blur);-webkit-backdrop-filter:var(--aa-glass-blur);
@@ -499,33 +515,136 @@ ul{list-style:none}
   font-size:12px;font-weight:600;padding:3px 10px;border-radius:8px;margin-top:4px;
 }
 
-/* ===== SCOREBOARD ===== */
-.tab-row{display:flex;gap:0;padding:0 20px 12px;border-bottom:1px solid var(--aa-border)}
+/* ===== PROFILE + SPEED BOARD ===== */
+.profile-control{
+  display:none;align-items:center;justify-content:center;gap:7px;min-height:44px;
+  padding:0 14px;border-radius:10px;background:var(--aa-amber);color:#fff;font-size:13px;font-weight:800;
+}
+.profile-control svg{width:18px;height:18px}
+.profile-control.is-visible{display:flex}
+.fab-profile{
+  display:none;width:auto;min-width:100px;padding:0 13px;border-radius:14px;gap:7px;
+  background:var(--aa-amber);color:#fff;border-color:var(--aa-amber);font-size:12px;font-weight:800;
+}
+.fab-profile.is-visible{display:flex}
+.fab-profile svg{flex:0 0 auto}
+.profile-body{padding:20px 20px 40px}
+.profile-summary{
+  display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:20px;
+  background:var(--aa-card);border:1px solid var(--aa-border);border-radius:16px;box-shadow:var(--aa-shadow-sm);
+}
+.profile-avatar{
+  width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+  position:relative;overflow:hidden;background:var(--aa-amber);color:#fff;font-size:17px;font-weight:800;letter-spacing:.4px;
+}
+.profile-avatar img{width:100%;height:100%;object-fit:cover}
+.photo-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--aa-border);border-radius:12px;background:var(--aa-card)}
+.photo-preview{width:64px;height:64px;flex:0 0 64px;border-radius:16px;object-fit:cover;background:var(--aa-divider)}
+.photo-copy{min-width:0}
+.photo-copy strong{display:block;font-size:14px}
+.photo-copy span{display:block;margin-top:2px;color:var(--aa-text-muted);font-size:12px;line-height:1.35}
+.photo-button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin-top:8px;padding:0 12px;border-radius:9px;background:var(--aa-amber);color:#fff;font-size:13px;font-weight:800;cursor:pointer}
+.history-section{margin-top:24px}
+.section-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.section-heading h2{font-size:17px}
+.section-heading span{color:var(--aa-text-muted);font-size:12px}
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-card{padding:13px;border:1px solid var(--aa-border);border-radius:12px;background:var(--aa-card)}
+.history-card-head{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:800}
+.history-card-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.history-card-meta span{padding:6px;border-radius:7px;background:var(--aa-surface);color:var(--aa-text-muted);font-size:11px}
+.history-card-meta strong{display:block;color:var(--aa-text);font-size:12px}
+.empty-state{padding:18px;border:1px dashed var(--aa-border);border-radius:12px;color:var(--aa-text-muted);font-size:13px;text-align:center}
+.profile-summary-copy{min-width:0}
+.profile-name{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-role{font-size:12px;font-weight:700;color:var(--aa-amber);text-transform:uppercase;letter-spacing:.7px}
+.profile-form{display:flex;flex-direction:column;gap:14px}
+.profile-field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.profile-field input{
+  width:100%;height:48px;padding:0 13px;border:1.5px solid var(--aa-border);border-radius:11px;
+  background:var(--aa-card);color:var(--aa-text);outline:none;
+}
+.profile-field input:focus{border-color:var(--aa-amber);box-shadow:0 0 0 3px rgba(67,97,238,.12)}
+.profile-field input[readonly]{background:var(--aa-surface);color:var(--aa-text-muted)}
+.profile-help{font-size:12px;color:var(--aa-text-muted);margin-top:5px}
+.profile-message{display:none;font-size:13px;font-weight:700}
+.profile-message.show{display:block}
+.profile-message.error{color:var(--aa-destructive)}
+.profile-message.success{color:var(--aa-success)}
+.profile-actions{margin-top:24px;border:1px solid var(--aa-border);border-radius:14px;overflow:hidden;background:var(--aa-card)}
+.profile-action{
+  width:100%;min-height:52px;padding:0 14px;display:flex;align-items:center;gap:11px;text-align:left;
+  border-bottom:1px solid var(--aa-divider);font-size:14px;font-weight:700;
+}
+.profile-action:last-child{border-bottom:0}
+.profile-action svg{width:20px;height:20px;color:var(--aa-amber);flex:0 0 auto}
+.profile-action .chevron{margin-left:auto;width:17px;height:17px;color:var(--aa-text-muted)}
+.admin-only-control{display:none}
+.admin-only-control.is-visible{display:flex}
+.profile-signout{margin-top:16px;color:var(--aa-destructive);border-color:color-mix(in srgb,var(--aa-destructive) 40%,var(--aa-border))}
+.tab-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 16px 12px;border-bottom:1px solid var(--aa-border)}
 .tab-btn{
-  padding:10px 4px;margin-right:24px;font-size:15px;font-weight:600;color:var(--aa-text-muted);
-  border-bottom:2px solid transparent;
+  min-width:0;min-height:44px;padding:8px 10px;border-radius:10px;font-size:13px;font-weight:700;
+  color:var(--aa-text-muted);border:1px solid transparent;line-height:1.2;
 }
-.tab-btn.active{color:var(--aa-amber);border-color:var(--aa-amber)}
-
-.rank-list{padding:16px 20px}
+.tab-btn.active{color:var(--aa-amber-dark);border-color:var(--aa-border);background:var(--aa-card);box-shadow:var(--aa-shadow-sm)}
+.board-intro{padding:16px 20px 4px}
+.board-intro strong{display:block;font-size:16px;margin-bottom:2px}
+.board-intro span{display:block;font-size:13px;color:var(--aa-text-muted)}
+.rank-list{padding:12px 20px 24px}
 .rank-row{
-  display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--aa-divider);
+  display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;
+  padding:13px 12px;margin-bottom:9px;background:var(--aa-card);border:1px solid var(--aa-border);border-radius:12px;
 }
-.rank-pos{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;background:var(--aa-divider);flex-shrink:0}
-.rank-pos.top{background:var(--aa-amber);color:#fff}
+.rank-row.perfect{border-color:color-mix(in srgb,var(--aa-success) 45%,var(--aa-border));background:color-mix(in srgb,var(--aa-success) 5%,var(--aa-card))}
+.rank-pos{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:var(--aa-divider)}
+.rank-row.perfect .rank-pos{background:var(--aa-success);color:#fff}
 .rank-info{flex:1;min-width:0}
-.rank-name{font-size:15px;font-weight:600}
-.rank-meta{font-size:12px;color:var(--aa-text-muted)}
-.score-bar{flex:0 0 80px;height:6px;border-radius:3px;background:var(--aa-divider);overflow:hidden}
-.score-fill{height:100%;border-radius:3px;transition:width .6s var(--ease)}
-.rank-score{font-size:15px;font-weight:700;min-width:32px;text-align:right}
+.rank-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-meta{font-size:12px;color:var(--aa-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-score{text-align:right}
+.rank-score strong{display:block;font-size:16px;color:var(--aa-amber-dark)}
+.rank-score span{display:block;font-size:11px;color:var(--aa-text-muted)}
+.trusted-mark{display:inline-flex;align-items:center;gap:4px;color:var(--aa-success)!important;font-weight:800}
+
+/* ===== ADMIN ===== */
+.admin-body{padding:16px 16px 40px}
+.sync-banner{display:flex;align-items:flex-start;gap:10px;padding:12px;margin-bottom:14px;border:1px solid var(--aa-border);border-radius:12px;background:var(--aa-card)}
+.sync-dot{width:10px;height:10px;margin-top:5px;border-radius:50%;background:var(--aa-warning);box-shadow:0 0 0 4px color-mix(in srgb,var(--aa-warning) 14%,transparent)}
+.sync-dot.synced{background:var(--aa-success)}
+.sync-copy{min-width:0;flex:1}
+.sync-copy strong{display:block;font-size:14px}
+.sync-copy span{display:block;color:var(--aa-text-muted);font-size:12px;line-height:1.4}
+.admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.admin-metric{padding:12px;border:1px solid var(--aa-border);border-radius:12px;background:var(--aa-card)}
+.admin-metric span{display:block;color:var(--aa-text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.admin-metric strong{display:block;margin-top:3px;font-size:21px}
+.admin-section{margin-top:18px;padding:14px;border:1px solid var(--aa-border);border-radius:14px;background:var(--aa-card)}
+.admin-section h2{font-size:16px}
+.admin-section-copy{margin:3px 0 12px;color:var(--aa-text-muted);font-size:12px;line-height:1.4}
+.admin-list{display:flex;flex-direction:column;gap:8px}
+.admin-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px;border-radius:9px;background:var(--aa-surface);font-size:12px}
+.admin-row-copy{min-width:0}
+.admin-row-copy strong,.admin-row-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-row-copy span{color:var(--aa-text-muted)}
+.admin-control{min-height:36px;padding:0 10px;border:1px solid var(--aa-border);border-radius:8px;background:var(--aa-card);font-size:12px;font-weight:700}
+.admin-form{display:grid;grid-template-columns:minmax(0,1fr) 84px auto;gap:7px}
+.admin-form input,.admin-form select{min-width:0;height:40px;padding:0 9px;border:1px solid var(--aa-border);border-radius:8px;background:var(--aa-surface)}
+.admin-form button{min-height:40px;padding:0 10px;border-radius:8px;background:var(--aa-amber);color:#fff;font-size:12px;font-weight:800}
+.admin-link{color:var(--aa-amber);font-size:13px;font-weight:800}
+@media(max-width:360px){.admin-form{grid-template-columns:1fr}.history-card-meta{grid-template-columns:1fr}}
 
 .violation-list{padding:16px 20px}
-.violation-card{background:var(--aa-card);border:1px solid var(--aa-border);border-radius:10px;padding:14px;margin-bottom:10px}
-.violation-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.violation-plate{font-size:14px;font-weight:700;background:var(--aa-text);color:var(--aa-surface);padding:2px 8px;border-radius:5px;letter-spacing:.5px}
-.violation-speed{font-size:13px;color:var(--aa-destructive);font-weight:600}
-.violation-detail{font-size:13px;color:var(--aa-text-muted)}
+.violation-card{background:var(--aa-card);border:1px solid var(--aa-border);border-radius:12px;padding:14px;margin-bottom:10px;min-width:0}
+.violation-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px}
+.violation-plate{font-size:14px;font-weight:800;background:var(--aa-text);color:var(--aa-surface);padding:3px 8px;border-radius:5px;letter-spacing:.5px;white-space:nowrap}
+.violation-over{font-size:13px;color:var(--aa-destructive);font-weight:800;white-space:nowrap}
+.violation-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.violation-metric{background:var(--aa-surface);border-radius:8px;padding:7px;min-width:0}
+.violation-metric span{display:block;font-size:10px;color:var(--aa-text-muted);text-transform:uppercase;letter-spacing:.4px}
+.violation-metric strong{display:block;font-size:13px;white-space:nowrap}
+.violation-detail{display:grid;grid-template-columns:1fr;gap:3px;font-size:12px;color:var(--aa-text-muted)}
+.violation-detail strong{color:var(--aa-text);font-weight:700}
 
 /* ===== REPORT ===== */
 .report-body{padding:16px 20px 40px}
@@ -621,6 +740,65 @@ ul{list-style:none}
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* Guided help and protected-access prompt */
+.access-help{
+  position:absolute;z-index:5;top:max(16px,env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));
+  width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.5);
+  background:var(--aa-amber);color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(15,35,74,.18);
+}
+.access-help svg{width:22px;height:22px}
+.modal-layer{
+  position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;
+  padding:max(18px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px))
+    max(18px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:rgba(16,24,40,.66);
+}
+.modal-layer.show{display:flex}
+.guide-dialog,.auth-gate-dialog{
+  width:min(100%,460px);max-height:calc(100dvh - 36px);overflow:auto;
+  border:1px solid var(--aa-border);border-radius:18px;background:var(--aa-card);color:var(--aa-text);
+  box-shadow:0 18px 52px rgba(13,25,48,.28);
+}
+.guide-dialog{padding:20px}
+.guide-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.guide-eyebrow{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--aa-blue)}
+.guide-title{margin-top:3px;font-size:23px;line-height:1.15;font-weight:800;letter-spacing:-.025em}
+.guide-skip{min-width:44px;min-height:44px;padding:0 6px;color:var(--aa-text-muted);font-size:13px;font-weight:700}
+.guide-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0 16px}
+.guide-progress-step{
+  position:relative;min-height:50px;display:flex;align-items:center;justify-content:center;
+  color:var(--aa-text-muted);border:1px solid var(--aa-border);border-radius:10px;background:var(--aa-surface);
+}
+.guide-progress-step::after{
+  content:"";position:absolute;left:8px;right:8px;bottom:5px;height:3px;border-radius:2px;background:var(--aa-divider);
+}
+.guide-progress-step svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.guide-progress-step.complete,.guide-progress-step.active{color:var(--aa-blue);border-color:rgba(67,97,238,.45)}
+.guide-progress-step.complete::after,.guide-progress-step.active::after{background:var(--aa-blue)}
+.guide-progress-step.active{background:rgba(67,97,238,.08);box-shadow:inset 0 0 0 1px rgba(67,97,238,.08)}
+.guide-card{
+  min-height:196px;padding:18px;border:1px solid var(--aa-border);border-radius:14px;background:var(--aa-surface);
+}
+.guide-step-icon{
+  width:38px;height:38px;color:var(--aa-blue);display:flex;align-items:center;justify-content:center;
+}
+.guide-step-icon svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.guide-step-title{margin-top:9px;font-size:20px;line-height:1.2;font-weight:800}
+.guide-step-copy{margin-top:9px;color:var(--aa-text-muted);font-size:15px;line-height:1.55}
+.guide-note{margin-top:14px;padding-top:13px;border-top:1px solid var(--aa-divider);font-size:13px;line-height:1.45;color:var(--aa-text)}
+.guide-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.guide-actions .btn{height:48px;border-radius:11px}
+.guide-actions .btn-primary{background:var(--aa-amber);color:#fff}
+.guide-actions .btn-outline[hidden]{visibility:hidden}
+.auth-gate-dialog{padding:24px}
+.auth-gate-icon{width:42px;height:42px;color:var(--aa-blue)}
+.auth-gate-title{margin-top:15px;font-size:22px;font-weight:800;line-height:1.2}
+.auth-gate-copy{margin-top:8px;font-size:15px;line-height:1.55;color:var(--aa-text-muted)}
+.auth-gate-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+.auth-gate-actions .btn{height:48px;border-radius:11px}
+.auth-gate-actions .btn-primary{background:var(--aa-amber);color:#fff}
+
 /* ===== MapLibre custom markers ===== */
 .user-dot-wrap{position:relative;width:40px;height:40px}
 .user-dot-pulse{
@@ -673,8 +851,8 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 }
 #screen-access{
   padding:0;
-  color:#13213c;
-  background:#eef4fb;
+  color:var(--aa-text);
+  background:var(--aa-bg);
   display:none;
   text-align:left;
   align-items:stretch;
@@ -684,7 +862,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 .access-stage{
   position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;
   min-height:42dvh;padding:max(28px,env(safe-area-inset-top,0px)) 24px 28px;
-  color:#fff;background:#2867e8;
+  color:#fff;background:var(--aa-amber);
 }
 .access-stage::before,.access-stage::after{
   content:"";position:absolute;pointer-events:none;border:3px solid rgba(255,255,255,.22);
@@ -698,13 +876,6 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 .access-brand-kicker{font-size:12px;color:rgba(255,255,255,.76)}
 .access-hero{position:relative;z-index:1;max-width:520px}
 .access-title{font-size:clamp(34px,8vw,58px);font-weight:800;line-height:.98;letter-spacing:-.045em;margin:0}
-.access-sub{max-width:390px;margin:14px 0 0;font-size:15px;line-height:1.55;color:rgba(255,255,255,.84)}
-.access-route-status{
-  position:relative;z-index:1;align-self:flex-start;display:flex;align-items:center;gap:8px;
-  min-height:34px;padding:7px 11px;border:1px solid rgba(255,255,255,.26);border-radius:999px;
-  background:rgba(17,44,96,.28);font-size:12px;font-weight:700;
-}
-.access-route-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#75e7a8;box-shadow:0 0 0 4px rgba(117,231,168,.16)}
 .access-panel{
   display:flex;flex-direction:column;justify-content:center;
   padding:28px max(22px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(22px,env(safe-area-inset-left,0px));
@@ -714,8 +885,8 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 .access-panel-copy{margin-top:5px;font-size:14px;color:var(--aa-text-muted)}
 .access-actions{max-width:none;margin-top:22px;gap:10px}
 .access-actions .btn{height:52px;border-radius:14px}
-.access-actions .btn-primary{background:#17315e;color:#fff}
-.access-actions .btn-ghost{background:#edf3fb;color:#17315e;backdrop-filter:none}
+.access-actions .btn-primary{background:var(--aa-amber);color:#fff}
+.access-actions .btn-ghost{background:#edf3fb;color:var(--aa-amber-dark);backdrop-filter:none}
 .access-actions .access-register{background:transparent;color:var(--aa-blue);height:auto;min-height:44px;text-decoration:underline;text-underline-offset:3px}
 .access-divider{margin:2px 0;color:var(--aa-text-muted)}
 .access-divider::before,.access-divider::after{background:var(--aa-divider)}
@@ -755,6 +926,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   .stat-mini .l{font-size:10px;letter-spacing:0;text-transform:none}
   .sheet-record{grid-area:record;width:100%;height:46px;justify-content:center}
   .fab-stack{right:max(10px,env(safe-area-inset-right,0px));bottom:calc(var(--journey-dock-height,148px) + 10px)}
+  .fab-profile{min-width:100px}
 }
 
 /* Tablets and desktop: use the available canvas while keeping forms readable. */
@@ -816,7 +988,6 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 /* Small phones: retain every action without squeezing labels or metrics. */
 @media(max-width:359px){
   .access-title{font-size:26px}
-  .access-sub{margin-bottom:24px}
   .mode-grid{gap:8px;padding-inline:12px}
   .mode-card{padding:16px 8px}
   .wiz-progress,.wiz-step-title,.wiz-step-sub,.wiz-nav{padding-left:12px;padding-right:12px}
@@ -834,6 +1005,8 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   .sheet-record{padding-inline:10px}
   .fab-stack{right:8px}
   .hazard-alert,.pin-mode-banner{left:8px;right:60px}
+  .guide-dialog{padding:16px}
+  .guide-card{min-height:180px;padding:15px}
 }
 
 /* Compact portrait phones: dock map actions above the journey sheet. */
@@ -845,6 +1018,18 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   .fab{width:44px;height:44px}
 }
 
+/* Phone-width maps: keep every journey action within reach in two columns. */
+@media(max-width:420px) and (orientation:portrait){
+  .fab-stack{
+    right:max(8px,env(safe-area-inset-right,0px));left:auto;
+    bottom:calc(var(--journey-dock-height,148px) + 8px);
+    display:grid;grid-template-columns:repeat(2,44px);gap:6px;
+  }
+  .fab{width:44px;height:44px}
+  .fab-profile{width:44px;min-width:44px;padding:0;border-radius:50%}
+  .fab-profile span{display:none}
+}
+
 /* Short landscape devices: change vertical map controls into a compact toolbar. */
 @media(max-height:560px) and (orientation:landscape){
   body{align-items:flex-start}
@@ -854,7 +1039,6 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   #screen-access{justify-content:flex-start;overflow-y:auto;padding-top:14px}
   .access-logo{width:58px;height:58px;border-radius:15px;margin-bottom:8px}
   .access-title{font-size:24px;margin-bottom:2px}
-  .access-sub{font-size:13px;margin-bottom:12px}
   .access-actions{gap:7px}
   .access-actions .btn{height:42px}
   .access-divider{margin:1px 0}
@@ -890,7 +1074,6 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   #screen-access{grid-template-columns:minmax(0,1.35fr) minmax(360px,.65fr)}
   .access-stage{min-height:100%;padding:clamp(36px,6vw,76px)}
   .access-title{font-size:clamp(48px,6vw,76px);max-width:650px}
-  .access-sub{font-size:17px}
   .access-panel{padding:clamp(40px,6vw,84px)}
   .access-panel-inner{width:min(100%,390px);margin:auto}
 }
@@ -923,7 +1106,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 .sheet-stats-mini .stat-mini:nth-child(3),.sheet-stats-mini .stat-mini:nth-child(4){display:none}
 .stat-mini .v{font-size:13px}
 .stat-mini .l{font-size:10px;letter-spacing:0;text-transform:none}
-.sheet-record{width:108px;height:52px;justify-content:center;border-radius:14px;background:#17315e;box-shadow:none}
+.sheet-record{width:108px;height:52px;justify-content:center;border-radius:14px;background:var(--aa-amber);box-shadow:none}
 .sheet-record.recording{background:#fff;color:var(--aa-destructive);border:1.5px solid var(--aa-destructive);box-shadow:none}
 .sheet-record.recording .dot{background:var(--aa-destructive)}
 
@@ -950,6 +1133,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
 </style>
+<meta name="arrive-alive-api-url" content="https://otbbyvdhqbnjvswrwzft.supabase.co/functions/v1/app-api">
 </head>
 <body>
 <div id="device">
@@ -963,6 +1147,9 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 
   <!-- ============ ACCESS SCREEN ============ -->
   <div class="screen active" id="screen-access">
+    <button type="button" class="access-help" onclick="openGuide()" aria-label="Open user guide" title="User guide" data-testid="button-help-access">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 114.3 1.5c-.9.8-2.1 1.2-2.1 2.8M12 17h.01"/></svg>
+    </button>
     <section class="access-stage" aria-labelledby="access-title">
       <div class="access-brand">
     <div class="access-logo">
@@ -972,9 +1159,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
       </div>
       <div class="access-hero">
         <h1 class="access-title" id="access-title">Drive aware.<br>Arrive safe.</h1>
-        <p class="access-sub">Live journey recording, community hazard alerts and clear speed guidance in one focused driving companion.</p>
       </div>
-      <div class="access-route-status">Road awareness ready</div>
     </section>
     <section class="access-panel" aria-label="Get started">
       <div class="access-panel-inner">
@@ -993,7 +1178,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 
   <!-- ============ REGISTER SCREEN ============ -->
   <div class="screen" id="screen-register">
-    <button type="button" class="auth-back" onclick="goBack('access')" aria-label="Go back" title="Go Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+    <button type="button" class="auth-back back-control" onclick="goBack('access')" aria-label="Go back" title="Go Back" data-testid="button-back-register"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
     <div class="auth-form">
       <h2>Create Account</h2>
       <p>Register to track your journeys and safety scores.</p>
@@ -1025,7 +1210,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 
   <!-- ============ LOGIN SCREEN ============ -->
   <div class="screen" id="screen-login">
-    <button type="button" class="auth-back" onclick="goBack('access')" aria-label="Go back" title="Go Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+    <button type="button" class="auth-back back-control" onclick="goBack('access')" aria-label="Go back" title="Go Back" data-testid="button-back-login"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
     <div class="auth-form">
       <h2>Welcome Back</h2>
       <p>Sign in to continue your safe journey.</p>
@@ -1050,7 +1235,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 
   <!-- ============ FORGOT PIN SCREEN ============ -->
   <div class="screen" id="screen-forgot">
-    <button type="button" class="auth-back" onclick="goBack('login')" aria-label="Go back" title="Go Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+    <button type="button" class="auth-back back-control" onclick="goBack('login')" aria-label="Go back" title="Go Back" data-testid="button-back-forgot"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
     <div class="auth-form">
       <h2>Reset PIN</h2>
       <p>Enter your phone number and secret word to reset your PIN.</p>
@@ -1079,8 +1264,12 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   <!-- ============ TRAVEL WIZARD ============ -->
   <div class="screen" id="screen-wizard">
     <div class="topbar">
-      <button type="button" class="icon-btn" onclick="wizardGoBack()" aria-label="Go back" title="Go Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <button type="button" class="icon-btn back-control" onclick="wizardGoBack()" aria-label="Go back" title="Go Back" data-testid="button-back-wizard"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
       <span class="tb-title">New Journey</span>
+      <button type="button" class="profile-control auth-only-control" onclick="openProfile()" aria-label="Open profile" data-testid="button-profile-wizard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+        Profile
+      </button>
       <button type="button" class="icon-btn" onclick="toggleTheme()" aria-label="Switch to night theme" title="Switch to night theme" data-testid="button-theme-toggle-wizard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
     </div>
     <div class="wiz-progress" id="wizProgress"><div class="wiz-dot active"></div><div class="wiz-dot"></div><div class="wiz-dot"></div><div class="wiz-dot"></div></div>
@@ -1088,7 +1277,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
     <p class="wiz-step-sub" id="wizSub">Choose how you're travelling today.</p>
     <div class="screen-scroll" id="wizBody" style="padding-top:0"></div>
     <div class="wiz-nav">
-      <button class="btn btn-outline" id="wizBack" onclick="wizBack()" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button type="button" class="btn btn-outline back-control" id="wizBack" onclick="wizBack()" style="display:none" aria-label="Previous setup step" data-testid="button-back-wizard-step"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
       <button class="btn btn-primary" id="wizNext" onclick="wizNext()">Continue</button>
     </div>
   </div>
@@ -1154,18 +1343,20 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
       <!-- Modern Speedometer -->
       <!-- Floating buttons -->
       <div class="fab-stack">
-        <button type="button" class="fab" id="fabBack" onclick="goBack('wizard')" title="Go Back" aria-label="Go Back" data-testid="button-map-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+        <button type="button" class="fab back-control" id="fabBack" onclick="goBack('wizard')" title="Go Back" aria-label="Go Back" data-testid="button-map-back"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
         <button type="button" class="fab" id="fabNav" onclick="openNavOverlay()" title="Navigate" aria-label="Navigate" data-testid="button-map-navigate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l19-9-9 19-2-8z"/></svg></button>
         <button type="button" class="fab" id="fabHazard" onclick="toggleHazards()" title="Hazards" aria-label="Toggle hazards" data-testid="button-map-hazards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L3 7v6c0 5 3.5 9 9 11 5.5-2 9-6 9-11V7z"/></svg></button>
+        <button type="button" class="fab fab-profile auth-only-control" onclick="openProfile()" title="Profile" aria-label="Open profile" data-testid="button-profile-journey"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg><span>Profile</span></button>
         <button type="button" class="fab" id="fabVoice" onclick="toggleVoice()" title="Voice guidance" aria-label="Toggle voice guidance" data-testid="button-map-voice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg></button>
         <button type="button" class="fab" id="fabReport" onclick="navigate('report',{preserveJourney:true})" title="Report" aria-label="Report incident" data-testid="button-map-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></button>
+        <button type="button" class="fab" onclick="openGuide()" title="User guide" aria-label="Open user guide" data-testid="button-help-journey"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 114.3 1.5c-.9.8-2.1 1.2-2.1 2.8M12 17h.01"/></svg></button>
         <button type="button" class="fab" id="fabLogout" onclick="doLogout()" title="Sign Out" aria-label="Sign out" data-testid="button-map-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
       </div>
 
       <!-- Nav search overlay -->
       <div class="nav-overlay" id="navOverlay">
         <div class="nav-overlay-head">
-          <button type="button" class="icon-btn" onclick="closeNavOverlay()" aria-label="Close destination search" title="Go Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+          <button type="button" class="icon-btn back-control" onclick="closeNavOverlay()" aria-label="Close destination search" title="Go Back" data-testid="button-back-navigation-search"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
           <span class="tb-title">Set Destination</span>
         </div>
         <div class="nav-search">
@@ -1232,27 +1423,139 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   </div>
   </div>
 
-  <!-- ============ SCOREBOARD ============ -->
-  <div class="screen" id="screen-score">
+  <!-- ============ PROFILE ============ -->
+  <div class="screen" id="screen-profile" data-testid="screen-profile">
     <div class="topbar">
-      <button type="button" class="icon-btn" onclick="startNewJourneySetup()" aria-label="Go back" title="Go Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
-      <span class="tb-title">Scoreboard</span>
-      <button type="button" class="icon-btn" onclick="doLogout()" title="Sign Out" aria-label="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
-    </div>
-    <div class="tab-row">
-      <button class="tab-btn active" onclick="switchTab(this,'tab-agencies')">Agencies</button>
-      <button class="tab-btn" onclick="switchTab(this,'tab-violations')">Violations</button>
+      <button type="button" class="icon-btn back-control" onclick="goBack('wizard')" aria-label="Go back" title="Go Back" data-testid="button-back-profile"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <span class="tb-title">Profile</span>
+      <button type="button" class="icon-btn" onclick="toggleTheme()" aria-label="Switch to night theme" title="Switch to night theme" data-testid="button-theme-toggle-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg></button>
     </div>
     <div class="screen-scroll">
-      <div id="tab-agencies"><div class="rank-list" id="rankList"></div></div>
-      <div id="tab-violations" style="display:none"><div class="violation-list" id="violationList"></div></div>
+      <main class="profile-body">
+        <section class="profile-summary" aria-label="Signed-in account">
+          <div class="profile-avatar" id="profileAvatar" data-testid="profile-avatar">AA</div>
+          <div class="profile-summary-copy">
+            <div class="profile-name" id="profileDisplayName" data-testid="profile-display-name">Account</div>
+            <div class="profile-role" id="profileRole" data-testid="profile-role">Registered user</div>
+          </div>
+        </section>
+        <form class="profile-form" onsubmit="event.preventDefault();saveProfile()" novalidate>
+          <div class="photo-row">
+            <img class="photo-preview" id="profilePhotoPreview" alt="Profile photo preview" hidden data-testid="image-profile-photo">
+            <div class="photo-copy">
+              <strong>Profile photo</strong>
+              <span>JPEG, PNG or WebP, up to 1 MB. Stored with your profile when available.</span>
+              <label class="photo-button" for="profilePhoto" data-testid="button-choose-profile-photo">Choose photo</label>
+              <input class="sr-only" id="profilePhoto" type="file" accept="image/jpeg,image/png,image/webp" onchange="handleProfilePhoto(event)" data-testid="input-profile-photo">
+            </div>
+          </div>
+          <div class="profile-field">
+            <label for="profileName">Full name</label>
+            <input id="profileName" type="text" autocomplete="name" maxlength="80" data-testid="input-profile-name">
+          </div>
+          <div class="profile-field">
+            <label for="profilePhone">Phone</label>
+            <input id="profilePhone" type="tel" autocomplete="tel" maxlength="24" data-testid="input-profile-phone">
+            <p class="profile-help" id="profilePhoneHelp"></p>
+          </div>
+          <p class="profile-message error" id="profileError" role="alert" data-testid="profile-error"></p>
+          <p class="profile-message success" id="profileSuccess" role="status" data-testid="profile-success"></p>
+          <button type="submit" class="btn btn-primary btn-block" data-testid="button-save-profile">Save Changes</button>
+        </form>
+        <div class="profile-actions" aria-label="Profile actions">
+          <button type="button" class="profile-action admin-only-control" onclick="openAdmin()" data-testid="button-profile-admin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 4v5c0 4.5-2.8 7.7-7 9-4.2-1.3-7-4.5-7-9V7z"/><path d="M9 12l2 2 4-4"/></svg>
+            Administration
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <button type="button" class="profile-action" onclick="openGuide()" data-testid="button-profile-guide">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 114.3 1.5c-.9.8-2.1 1.2-2.1 2.8M12 17h.01"/></svg>
+            Open User Guide
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <button type="button" class="profile-action" onclick="openSpeedBoard()" data-testid="button-profile-speed-board">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19a8 8 0 1116 0"/><path d="M12 12l4-4M7 19h10"/></svg>
+            Open Speed Board
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+        <section class="history-section" aria-labelledby="journeyHistoryTitle">
+          <div class="section-heading"><h2 id="journeyHistoryTitle">Journey history</h2><span id="journeyHistoryCount">0 journeys</span></div>
+          <div class="history-list" id="journeyHistory" data-testid="journey-history"></div>
+        </section>
+        <button type="button" class="btn btn-outline btn-block profile-signout" onclick="doLogout()" data-testid="button-profile-sign-out">Sign Out</button>
+      </main>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="screen" id="screen-admin" data-testid="screen-admin">
+    <header class="topbar">
+      <button type="button" class="icon-btn back-control" onclick="goBack('profile')" aria-label="Go back" title="Go Back" data-testid="button-back-admin"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <h1 class="tb-title">Administration</h1>
+      <button type="button" class="icon-btn" onclick="runSync()" aria-label="Synchronize data" title="Synchronize data" data-testid="button-admin-sync"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-5V2"/><path d="M4 17h5v5"/><path d="M5.2 9A8 8 0 0118 5l2 2M18.8 15A8 8 0 016 19l-2-2"/></svg></button>
+    </header>
+    <div class="screen-scroll">
+      <main class="admin-body">
+        <div class="sync-banner" role="status" data-testid="admin-sync-health">
+          <span class="sync-dot" id="syncDot"></span>
+          <div class="sync-copy"><strong id="syncTitle">Local fallback</strong><span id="syncMessage">Checking API availability…</span></div>
+        </div>
+        <section aria-labelledby="adminOverviewTitle">
+          <div class="section-heading"><h2 id="adminOverviewTitle">Overview</h2><span>Current client view</span></div>
+          <div class="admin-grid" id="adminMetrics"></div>
+        </section>
+        <section class="admin-section" aria-labelledby="adminUsersTitle">
+          <h2 id="adminUsersTitle">User management</h2>
+          <p class="admin-section-copy">Review accounts and enable or suspend local access.</p>
+          <div class="admin-list" id="adminUsers"></div>
+        </section>
+        <section class="admin-section" aria-labelledby="adminReportsTitle">
+          <h2 id="adminReportsTitle">Incident & report moderation</h2>
+          <p class="admin-section-copy">Resolve or reactivate community reports.</p>
+          <div class="admin-list" id="adminReports"></div>
+        </section>
+        <section class="admin-section" aria-labelledby="adminBoardTitle">
+          <h2 id="adminBoardTitle">Speed Board & trusted agencies</h2>
+          <p class="admin-section-copy">Add agencies, set their score, and manage trusted status.</p>
+          <form class="admin-form" onsubmit="event.preventDefault();addAgency()">
+            <input id="adminAgencyName" aria-label="Agency name" placeholder="Agency name" maxlength="80" data-testid="input-admin-agency">
+            <input id="adminAgencyScore" aria-label="Safety score" type="number" min="0" max="100" value="100" data-testid="input-admin-agency-score">
+            <button type="submit" data-testid="button-add-agency">Add</button>
+          </form>
+          <div class="admin-list" id="adminAgencies" style="margin-top:10px"></div>
+          <div class="admin-list" id="adminSpeedLimits" style="margin-top:10px"></div>
+        </section>
+        <section class="admin-section" aria-labelledby="adminSyncTitle">
+          <h2 id="adminSyncTitle">Synchronization health</h2>
+          <p class="admin-section-copy" id="adminSyncDetail">This build is checking its configured data adapter.</p>
+          <button type="button" class="admin-link" onclick="runSync()" data-testid="button-retry-sync">Retry synchronization</button>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ============ SPEED BOARD ============ -->
+  <div class="screen" id="screen-score" data-testid="screen-speed-board">
+    <div class="topbar">
+      <button type="button" class="icon-btn back-control" onclick="goBack('profile')" aria-label="Go back" title="Go Back" data-testid="button-back-speed-board"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <span class="tb-title">Speed Board</span>
+      <button type="button" class="icon-btn" onclick="openProfile()" title="Profile" aria-label="Open profile" data-testid="button-speed-board-profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></button>
+    </div>
+    <div class="tab-row" role="tablist" aria-label="Speed Board views">
+      <button type="button" class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-agencies" onclick="switchTab(this,'tab-agencies')" data-testid="tab-trusted-agencies">Trusted agencies</button>
+      <button type="button" class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-violations" onclick="switchTab(this,'tab-violations')" data-testid="tab-speeding-vehicles">Speeding vehicles</button>
+    </div>
+    <div class="screen-scroll">
+      <div id="tab-agencies" role="tabpanel"><div class="board-intro"><strong>Agency safety scores</strong><span>100-score agencies are marked as trusted.</span></div><div class="rank-list" id="rankList"></div></div>
+      <div id="tab-violations" role="tabpanel" style="display:none"><div class="violation-list" id="violationList"></div></div>
     </div>
   </div>
 
   <!-- ============ REPORT ============ -->
   <div class="screen" id="screen-report">
     <div class="topbar">
-      <button type="button" class="icon-btn" onclick="goBack('journey')" aria-label="Go back" title="Go Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+      <button type="button" class="icon-btn back-control" onclick="goBack('journey')" aria-label="Go back" title="Go Back" data-testid="button-back-report"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
       <span class="tb-title">Report Incident</span>
       <button type="button" class="icon-btn" onclick="toggleTheme()" aria-label="Switch to night theme" title="Switch to night theme" data-testid="button-theme-toggle-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg></button>
     </div>
@@ -1293,54 +1596,238 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
     </div>
   </div>
 
+  <div class="modal-layer" id="guideModal" role="presentation" data-testid="guide-modal">
+    <section class="guide-dialog" role="dialog" aria-modal="true" aria-labelledby="guideTitle" aria-describedby="guideCopy">
+      <div class="guide-head">
+        <div>
+          <div class="guide-eyebrow" aria-hidden="true">User guide</div>
+          <span class="sr-only" id="guideStepLabel" data-testid="guide-step-label">Step 1 of 4</span>
+          <h2 class="guide-title" id="guideTitle">Drive with live speed recording</h2>
+        </div>
+        <button type="button" class="guide-skip" onclick="closeGuide(true)" aria-label="Skip user guide" data-testid="button-guide-skip">Skip</button>
+      </div>
+      <div class="guide-progress" id="guideProgress" aria-label="Guide progress" data-testid="guide-progress"></div>
+      <article class="guide-card" data-testid="guide-step-card">
+        <div class="guide-step-icon" id="guideStepIcon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        <h3 class="guide-step-title" id="guideStepTitle">Drive / Start</h3>
+        <p class="guide-step-copy" id="guideCopy">Set up the vehicle, open the journey map, then tap Start. Speed recording begins only when the vehicle moves.</p>
+        <p class="guide-note" id="guideNote">Keep location access on for accurate live speed and distance.</p>
+      </article>
+      <div class="guide-actions">
+        <button type="button" class="btn btn-outline" id="guideBack" onclick="changeGuideStep(-1)" data-testid="button-guide-back">Back</button>
+        <button type="button" class="btn btn-primary" id="guideNext" onclick="changeGuideStep(1)" data-testid="button-guide-next">Next</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-layer" id="authGateModal" role="presentation" data-testid="registered-access-prompt">
+    <section class="auth-gate-dialog" role="dialog" aria-modal="true" aria-labelledby="authGateTitle" aria-describedby="authGateCopy">
+      <svg class="auth-gate-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3M12 14v3"/></svg>
+      <h2 class="auth-gate-title" id="authGateTitle">Sign in to continue</h2>
+      <p class="auth-gate-copy" id="authGateCopy">This area is available to registered users and administrators.</p>
+      <div class="auth-gate-actions">
+        <button type="button" class="btn btn-outline" onclick="closeAuthGate()" data-testid="button-access-prompt-close">Not now</button>
+        <button type="button" class="btn btn-primary" onclick="signInFromAccessGate()" data-testid="button-access-prompt-sign-in">Sign in</button>
+      </div>
+    </section>
+  </div>
+
 </div>
 
+<script src="web-repository.js"></script>
 <script>
 /* ============================================================
    ARRIVE ALIVE — Road Safety Demo (MapLibre GL JS powered)
    ============================================================ */
 
 const $=id=>document.getElementById(id);
+// Set the meta value at deploy time to the public Edge Function URL. It is an
+// endpoint, not a credential; opaque user tokens are supplied only after login.
+const APP_API_URL=(document.querySelector('meta[name="arrive-alive-api-url"]')?.content||'').replace(/\/+$/,'');
+const aaRepository=ArriveAliveRepository.createRepository({
+  endpoint:APP_API_URL?`${APP_API_URL}/api/sync`:'/api/sync',
+  tokenProvider:()=>getAASession()?.token||null,
+  storage:(()=>{try{return window.localStorage}catch(_){return null}})()
+});
+window.__arriveAliveRepository=aaRepository;
 
 /* ---- Navigation ---- */
-const screens=['access','register','login','forgot','wizard','journey','score','report'];
+const screens=['access','register','login','forgot','wizard','journey','profile','score','report','admin'];
 let currentScreen='access';
-const screenHistory=[];
-function navigate(name,options={}){
-  if(!screens.includes(name))return;
-  const {replace=false,preserveJourney=false}=options;
-  if(name!==currentScreen&&!replace)screenHistory.push(currentScreen);
+let historyDepth=0;
+function isRegisteredAccessAllowed(){return Boolean(getAASession()&&['user','admin'].includes(getAASession().role))}
+function isAdminAccessAllowed(){return Boolean(getAASession()&&getAASession().role==='admin')}
+function renderScreen(name,{preserveJourney=false}={}){
+  if(name==='admin'&&!isAdminAccessAllowed()){
+    name=isRegisteredAccessAllowed()?'profile':'access';
+    showToast('Administrator access required');
+  }
+  const previousScreen=currentScreen;
   currentScreen=name;
   screens.forEach(s=>$('screen-'+s).classList.toggle('active',s===name));
-  if(name==='journey'){initMap();}
-  if(name==='score'){renderScoreboard();}
+  if(name==='journey'){
+    if(previousScreen!=='journey')restoreMapboxDefault();
+    else initMap();
+    requestMapResize();
+  }
+  if(name==='profile'){renderProfile();}
+  if(name==='score'){renderSpeedBoard();}
+  if(name==='admin'){renderAdmin();}
   if(name==='report'){prepareReport();}
   if(name!=='journey'&&!preserveJourney)forceStationary();
 }
+function navigate(name,options={}){
+  if(!screens.includes(name))return false;
+  const {replace=false,preserveJourney=false,fromPop=false}=options;
+  if(['profile','score'].includes(name)&&!isRegisteredAccessAllowed()){
+    openAuthGate(name);
+    return false;
+  }
+  if(name==='admin'&&!isAdminAccessAllowed()){
+    showToast('Administrator access required');
+    return false;
+  }
+  if(!fromPop){
+    if(replace){
+      window.history.replaceState({aaScreen:name,aaDepth:historyDepth},'',window.location.href);
+    }else if(name!==currentScreen){
+      historyDepth+=1;
+      window.history.pushState({aaScreen:name,aaDepth:historyDepth},'',window.location.href);
+    }
+  }
+  renderScreen(name,{preserveJourney});
+  return true;
+}
 function resetNavigation(name){
-  screenHistory.length=0;
+  historyDepth=0;
   navigate(name,{replace:true});
 }
 function goBack(fallback='access'){
-  const previous=screenHistory.pop()||fallback;
-  navigate(previous,{replace:true,preserveJourney:previous==='journey'&&journeyActive});
+  if($('guideModal').classList.contains('show')){closeGuide(false);return;}
+  if($('authGateModal').classList.contains('show')){closeAuthGate();return;}
+  if($('navOverlay').classList.contains('show')){closeNavOverlay();return;}
+  const state=window.history.state;
+  if(state&&state.aaDepth>0){window.history.back();return;}
+  navigate(fallback,{replace:true,preserveJourney:fallback==='journey'&&journeyActive});
 }
+window.history.replaceState({aaScreen:'access',aaDepth:0},'',window.location.href);
+window.addEventListener('popstate',event=>{
+  if($('guideModal').classList.contains('show'))closeGuide(false);
+  if($('authGateModal').classList.contains('show'))closeAuthGate();
+  if($('navOverlay').classList.contains('show'))$('navOverlay').classList.remove('show');
+  const state=event.state;
+  historyDepth=state&&Number.isFinite(state.aaDepth)?state.aaDepth:0;
+  let target=state&&screens.includes(state.aaScreen)?state.aaScreen:'access';
+  if(['profile','score'].includes(target)&&!isRegisteredAccessAllowed()){
+    target='access';
+    window.history.replaceState({aaScreen:'access',aaDepth:historyDepth},'',window.location.href);
+    renderScreen('access');
+    openAuthGate(state&&state.aaScreen==='score'?'score':'profile');
+    return;
+  }
+  if(target==='admin'&&!isAdminAccessAllowed()){
+    target=isRegisteredAccessAllowed()?'profile':'access';
+    window.history.replaceState({aaScreen:target,aaDepth:historyDepth},'',window.location.href);
+  }
+  renderScreen(target,{preserveJourney:target==='journey'&&journeyActive});
+});
 function showToast(msg){
   const t=$('toast');t.textContent=msg;t.classList.add('show');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);
 }
 
-/* ---- Auth (in-memory demo backend) ---- */
-let aaUsers={};
-let aaSession=null;
+/* ---- Auth (local demo authentication; public account data uses the shared repository) ---- */
+const AUTH_STORAGE_KEY='arrive-alive-demo-auth-v1';
+function readLocalAuth(){
+  try{return JSON.parse(window.localStorage.getItem(AUTH_STORAGE_KEY)||'{}')||{}}
+  catch(_){return {}}
+}
+function writeLocalAuth(users){
+  try{window.localStorage.setItem(AUTH_STORAGE_KEY,JSON.stringify(users));return true}
+  catch(_){return false}
+}
+let aaUsers=readLocalAuth();
+const SESSION_STORAGE_KEY='arrive-alive-session-v2';
+let aaSession=(()=>{try{return JSON.parse(window.sessionStorage.getItem(SESSION_STORAGE_KEY)||'null')}catch(_){return null}})();
+let syncTimer=null;
+function queueSync(){
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>aaRepository.sync(getAASession()?.role||'user').then(renderSyncHealth),350);
+}
+async function runSync(){
+  renderSyncHealth({...aaRepository.getStatus(),state:'syncing',message:'Checking the sync API…'});
+  await aaRepository.sync(getAASession()?.role||'user');
+  renderAdmin();
+}
+function renderSyncHealth(status=aaRepository.getStatus()){
+  if(!$('syncTitle'))return;
+  const durable=status.durable===true;
+  $('syncDot').classList.toggle('synced',status.state==='synced');
+  $('syncTitle').textContent=status.state==='syncing'?'Synchronizing':status.state==='synced'?(durable?'Durable sync connected':'API connected · not durable'):'Local fallback';
+  $('syncMessage').textContent=status.message;
+  $('adminSyncDetail').textContent=`Mode: ${status.mode}. Last success: ${status.lastSuccessAt?new Date(status.lastSuccessAt).toLocaleString():'none'}. Durable storage: ${durable?'yes':'no'}.`;
+}
 function getAAUsers(){return aaUsers}
-function saveAAUsers(u){aaUsers=u}
+function saveAAUsers(u){
+  aaUsers=u;
+  writeLocalAuth(u);
+  Object.values(u).forEach(user=>aaRepository.upsert('users',{
+    id:`user-${user.phone}`,name:user.name,phone:user.phone,role:user.role||'user',
+    status:user.status||'active',createdAt:new Date(user.createdAt||Date.now()).toISOString()
+  }));
+  queueSync();
+}
 function getAASession(){return aaSession}
-function setAASession(s){aaSession=s||null}
+function setAASession(s){
+  aaSession=s||null;
+  try{if(aaSession)window.sessionStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(aaSession));else window.sessionStorage.removeItem(SESSION_STORAGE_KEY)}catch(_){}
+  updateAuthenticatedControls()
+}
+async function callAppApi(path,{method='GET',body,token}={}){
+  if(!APP_API_URL)throw new Error('Durable API is not configured');
+  const response=await fetch(`${APP_API_URL}${path}`,{method,headers:{'Accept':'application/json',...(body?{'Content-Type':'application/json'}:{}),...(token?{'Authorization':`Bearer ${token}`}:{})},body:body?JSON.stringify(body):undefined});
+  let payload={};try{payload=await response.json()}catch(_){}
+  if(!response.ok)throw new Error(payload.error||`API returned ${response.status}`);
+  return payload;
+}
 function currentUser(){return getAASession()}
 function isLoggedIn(){return getAASession()!==null}
+function updateAuthenticatedControls(){
+  const allowed=isRegisteredAccessAllowed();
+  document.querySelectorAll('.auth-only-control').forEach(control=>control.classList.toggle('is-visible',allowed));
+  document.querySelectorAll('.admin-only-control').forEach(control=>control.classList.toggle('is-visible',isAdminAccessAllowed()));
+}
+function openProfile(){
+  if(!isRegisteredAccessAllowed()){openAuthGate('profile');return;}
+  navigate('profile',{preserveJourney:journeyActive});
+}
+function openSpeedBoard(){
+  if(!isRegisteredAccessAllowed()){openAuthGate('score');return;}
+  navigate('score',{preserveJourney:journeyActive});
+}
+function openAdmin(){
+  if(!isAdminAccessAllowed()){showToast('Administrator access required');return;}
+  navigate('admin',{preserveJourney:journeyActive});
+}
+function openAuthGate(target='profile'){
+  const isBoard=target==='score';
+  $('authGateTitle').textContent=isBoard?'Sign in to view the Speed Board':'Sign in to view your profile';
+  $('authGateCopy').textContent=isBoard
+    ?'Speed Board access is available to registered users and administrators.'
+    :'Profile access is available to registered users and administrators.';
+  $('authGateModal').dataset.target=target;
+  $('authGateModal').classList.add('show');
+  setTimeout(()=>$('authGateModal').querySelector('[data-testid="button-access-prompt-sign-in"]')?.focus(),0);
+}
+function closeAuthGate(){$('authGateModal').classList.remove('show')}
+function signInFromAccessGate(){
+  closeAuthGate();
+  navigate('login');
+}
 
-function doRegister(){
+async function doRegister(){
   const name=$('regName').value.trim();
   const phone=$('regPhone').value.trim();
   const pin=$('regPin').value.trim();
@@ -1348,82 +1835,56 @@ function doRegister(){
   const secret=$('regSecret').value.trim();
   const errEl=$('regError');const succEl=$('regSuccess');
   errEl.classList.remove('show');succEl.classList.remove('show');
-
   if(!name||!phone||!pin||!pin2||!secret){errEl.textContent='Please fill in all fields.';errEl.classList.add('show');return;}
   if(name.length<2){errEl.textContent='Name must be at least 2 characters.';errEl.classList.add('show');return;}
   if(phone.length<6){errEl.textContent='Please enter a valid phone number.';errEl.classList.add('show');return;}
   if(!/^\d{4}$/.test(pin)){errEl.textContent='PIN must be exactly 4 digits.';errEl.classList.add('show');return;}
   if(pin!==pin2){errEl.textContent='PINs do not match.';errEl.classList.add('show');return;}
   if(secret.length<3){errEl.textContent='Secret word must be at least 3 characters.';errEl.classList.add('show');return;}
-
-  const users=getAAUsers();
-  if(users[phone]){errEl.textContent='An account with this phone number already exists. Please sign in instead.';errEl.classList.add('show');return;}
-
-  users[phone]={name,phone,pin,secret,role:'user',createdAt:Date.now()};
-  saveAAUsers(users);
-  succEl.textContent='Account created successfully! Redirecting to sign in...';succEl.classList.add('show');
-  showToast('Registration successful');
-  setTimeout(()=>{
-    resetNavigation('login');
-    $('loginPhone').value=phone;
-    $('loginPin').focus();
-  },1200);
+  try{
+    if(APP_API_URL){
+      await callAppApi('/api/auth/register',{method:'POST',body:{displayName:name,phone,pin,secretWord:secret}});
+      const users=getAAUsers();users[phone]={name,phone,role:'user',createdAt:Date.now()};saveAAUsers(users);
+    }else{
+      const users=getAAUsers();if(users[phone])throw new Error('An account with this phone number already exists. Please sign in instead.');
+      users[phone]={name,phone,pin,secret,role:'user',createdAt:Date.now()};saveAAUsers(users);
+    }
+    succEl.textContent='Account created successfully! Redirecting to sign in...';succEl.classList.add('show');showToast('Registration successful');
+    setTimeout(()=>{resetNavigation('login');$('loginPhone').value=phone;$('loginPin').focus();},1200);
+  }catch(error){errEl.textContent=error.message;errEl.classList.add('show');}
 }
 
-function doLogin(){
-  const phone=$('loginPhone').value.trim();
-  const pin=$('loginPin').value.trim();
-  const errEl=$('loginError');
-  errEl.classList.remove('show');
-
+async function doLogin(){
+  const phone=$('loginPhone').value.trim();const pin=$('loginPin').value.trim();const errEl=$('loginError');errEl.classList.remove('show');
   if(!phone||!pin){errEl.textContent='Please enter your phone number and PIN.';errEl.classList.add('show');return;}
-
-  // Admin login
-  if(phone==='admin'&&pin==='1234'){
-    setAASession({name:'Admin',phone:'admin',role:'admin'});
-    showToast('Welcome, Admin');
-    afterAuth();
-    return;
-  }
-
-  const users=getAAUsers();
-  const user=users[phone];
-  if(!user){errEl.textContent='No account found with this phone number. Please register first.';errEl.classList.add('show');return;}
-  if(user.pin!==pin){errEl.textContent='Incorrect PIN. Please try again.';errEl.classList.add('show');return;}
-
-  setAASession({name:user.name,phone:user.phone,role:user.role||'user'});
-  showToast('Welcome back, '+user.name);
-  afterAuth();
+  try{
+    if(APP_API_URL){
+      const user=await callAppApi('/api/auth/login',{method:'POST',body:{phone,pin}});
+      setAASession({id:user.id,name:user.displayName||user.phone,phone:user.phone,role:user.role||'user',token:user.token});
+      aaRepository.upsert('users',{id:`user-${user.id}`,name:user.displayName||user.phone,phone:user.phone,role:user.role||'user',status:'active'});
+    }else{
+      const users=getAAUsers();const user=users[phone];
+      if(!user)throw new Error('No account found with this phone number. Please register first.');
+      if(user.status==='suspended')throw new Error('This account is suspended. Contact an administrator.');
+      if(user.pin!==pin)throw new Error('Incorrect PIN. Please try again.');
+      setAASession({name:user.name,phone:user.phone,role:user.role||'user'});
+    }
+    showToast('Welcome back, '+getAASession().name);afterAuth();
+  }catch(error){errEl.textContent=error.message;errEl.classList.add('show');}
 }
 
-function doResetPin(){
-  const phone=$('forgotPhone').value.trim();
-  const secret=$('forgotSecret').value.trim();
-  const newPin=$('forgotNewPin').value.trim();
-  const newPin2=$('forgotNewPin2').value.trim();
-  const errEl=$('forgotError');const succEl=$('forgotSuccess');
-  errEl.classList.remove('show');succEl.classList.remove('show');
-
+async function doResetPin(){
+  const phone=$('forgotPhone').value.trim();const secret=$('forgotSecret').value.trim();const newPin=$('forgotNewPin').value.trim();const newPin2=$('forgotNewPin2').value.trim();
+  const errEl=$('forgotError');const succEl=$('forgotSuccess');errEl.classList.remove('show');succEl.classList.remove('show');
   if(!phone||!secret||!newPin||!newPin2){errEl.textContent='Please fill in all fields.';errEl.classList.add('show');return;}
   if(!/^\d{4}$/.test(newPin)){errEl.textContent='PIN must be exactly 4 digits.';errEl.classList.add('show');return;}
   if(newPin!==newPin2){errEl.textContent='PINs do not match.';errEl.classList.add('show');return;}
-
-  const users=getAAUsers();
-  const user=users[phone];
-  if(!user){errEl.textContent='No account found with this phone number.';errEl.classList.add('show');return;}
-  if(!user.secret){errEl.textContent='No secret word set for this account. Please re-register.';errEl.classList.add('show');return;}
-  if(user.secret.toLowerCase()!==secret.toLowerCase()){errEl.textContent='Secret word does not match.';errEl.classList.add('show');return;}
-
-  user.pin=newPin;
-  users[phone]=user;
-  saveAAUsers(users);
-  succEl.textContent='PIN reset successfully! Redirecting to sign in...';succEl.classList.add('show');
-  showToast('PIN reset successful');
-  setTimeout(()=>{
-    resetNavigation('login');
-    $('loginPhone').value=phone;
-    $('loginPin').focus();
-  },1200);
+  try{
+    if(APP_API_URL)await callAppApi('/api/auth/reset-pin',{method:'POST',body:{phone,secretWord:secret,newPin}});
+    else{const users=getAAUsers();const user=users[phone];if(!user)throw new Error('No account found with this phone number.');if(!user.secret||user.secret.toLowerCase()!==secret.toLowerCase())throw new Error('Secret word does not match.');user.pin=newPin;users[phone]=user;saveAAUsers(users);}
+    succEl.textContent='PIN reset successfully! Redirecting to sign in...';succEl.classList.add('show');showToast('PIN reset successful');
+    setTimeout(()=>{resetNavigation('login');$('loginPhone').value=phone;$('loginPin').focus();},1200);
+  }catch(error){errEl.textContent=error.message;errEl.classList.add('show');}
 }
 
 function afterAuth(){
@@ -1438,13 +1899,15 @@ function afterAuth(){
   $('loginError').classList.remove('show');
   $('forgotError').classList.remove('show');$('forgotSuccess').classList.remove('show');
   if(session.role==='admin'){
-    resetNavigation('score');renderScoreboard();
+    resetNavigation('admin');renderAdmin();
   }else{
     resetNavigation('wizard');renderWiz();
   }
 }
 
 function doLogout(){
+  const session=getAASession();
+  if(APP_API_URL&&session?.token)callAppApi('/api/auth/logout',{method:'POST',token:session.token}).catch(()=>{});
   setAASession(null);
   journey.driver='Guest';
   stopMotionTracking();
@@ -1458,9 +1921,9 @@ function checkSessionOnLoad(){
   if(session){
     journey.driver=session.name;
     showToast('Welcome back, '+session.name);
-    if(session.role==='admin'){resetNavigation('score');renderScoreboard();}
+    if(session.role==='admin'){resetNavigation('admin');renderAdmin();}
     else{resetNavigation('wizard');renderWiz();}
-  }
+  }else updateAuthenticatedControls();
 }
 
 /* ---- Theme ---- */
@@ -1595,6 +2058,102 @@ function speak(text){
   window.speechSynthesis.speak(u);
 }
 
+/* ---- First-visit guide ---- */
+const GUIDE_STORAGE_KEY='arriveAliveGuideSeenV1';
+let guideSeenFallback=false;
+let guideStep=0;
+const GUIDE_STEPS=[
+  {
+    title:'Drive / Start',
+    heading:'Drive with live speed recording',
+    icon:'play',
+    copy:'Set up the vehicle, open the journey map, then tap Start. Speed recording begins only when the vehicle moves.',
+    note:'Keep location access on for accurate live speed and distance.'
+  },
+  {
+    title:'Navigate',
+    heading:'Choose a destination',
+    icon:'navigation',
+    copy:'Tap Navigate, search for a city and select it. The map shows the route and gives turn-by-turn guidance.',
+    note:'Selecting a route never starts speed recording automatically.'
+  },
+  {
+    title:'Hazards',
+    heading:'See and confirm active hazards',
+    icon:'hazard',
+    copy:'Active community hazards appear on the map by default. Open a marker and choose Still there or Not there to keep reports current.',
+    note:'Hazard viewing and confirmations are available to guests and signed-in users.'
+  },
+  {
+    title:'Report',
+    heading:'Report what you observe',
+    icon:'report',
+    copy:'Tap Report, choose an incident, confirm its location and submit. New road incidents appear as active map hazards.',
+    note:'Registered users and administrators can open Profile to view the Speed Board; guests are prompted to sign in.'
+  }
+];
+const GUIDE_ICONS={
+  play:'<path d="M8 5v14l11-7z"/>',
+  navigation:'<path d="M3 11l18-8-8 18-2-8z"/>',
+  hazard:'<path d="M12 3L2.8 20h18.4L12 3z"/><path d="M12 9v4M12 17h.01"/>',
+  report:'<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'
+};
+function guideIconSvg(icon){
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">${GUIDE_ICONS[icon]||GUIDE_ICONS.report}</svg>`;
+}
+function readGuideSeen(){
+  return guideSeenFallback;
+}
+function markGuideSeen(){
+  guideSeenFallback=true;
+}
+function playGuideSound(){
+  try{
+    const sound=new Audio('/assets/sounds/guide-bubble.wav');
+    sound.volume=.18;
+    const playback=sound.play();
+    if(playback&&typeof playback.catch==='function')playback.catch(()=>{});
+  }catch(error){}
+}
+function renderGuideStep({playSound=false}={}){
+  const step=GUIDE_STEPS[guideStep];
+  $('guideStepLabel').textContent=`Step ${guideStep+1} of ${GUIDE_STEPS.length}`;
+  $('guideStepIcon').innerHTML=guideIconSvg(step.icon);
+  $('guideTitle').textContent=step.heading;
+  $('guideStepTitle').textContent=step.title;
+  $('guideCopy').textContent=step.copy;
+  $('guideNote').textContent=step.note;
+  $('guideProgress').innerHTML=GUIDE_STEPS.map((item,index)=>{
+    const state=index===guideStep?'active':index<guideStep?'complete':'';
+    const current=index===guideStep?' aria-current="step"':'';
+    return `<span class="guide-progress-step ${state}"${current}>${guideIconSvg(item.icon)}<span class="sr-only">Step ${index+1}: ${item.title}</span></span>`;
+  }).join('');
+  $('guideProgress').setAttribute('aria-label',`Step ${guideStep+1} of ${GUIDE_STEPS.length}`);
+  $('guideBack').hidden=guideStep===0;
+  $('guideNext').textContent=guideStep===GUIDE_STEPS.length-1?'Done':'Next';
+  if(playSound)playGuideSound();
+}
+function openGuide({firstVisit=false}={}){
+  guideStep=0;
+  if(firstVisit)markGuideSeen();
+  renderGuideStep();
+  $('guideModal').classList.add('show');
+  setTimeout(()=>$('guideNext').focus(),0);
+}
+function closeGuide(markSeen=false){
+  if(markSeen)markGuideSeen();
+  $('guideModal').classList.remove('show');
+}
+function changeGuideStep(direction){
+  if(direction>0&&guideStep===GUIDE_STEPS.length-1){closeGuide(true);return;}
+  guideStep=Math.max(0,Math.min(GUIDE_STEPS.length-1,guideStep+direction));
+  renderGuideStep({playSound:true});
+}
+function maybeOpenFirstVisitGuide(){
+  if(readGuideSeen()||$('authGateModal').classList.contains('show')||currentScreen!=='access')return;
+  openGuide({firstVisit:true});
+}
+
 /* ============================================================
    TRAVEL WIZARD
    ============================================================ */
@@ -1630,12 +2189,19 @@ function getAdminSpeedLimit(mode){
 function setAdminSpeedLimit(mode,limit){
   const limits=getAdminSpeedLimits();
   limits[mode]=parseInt(limit);aaSpeedLimits=limits;
+  aaRepository.upsert('speedLimits',{id:`limit-${mode}`,mode,limit:limits[mode]});
+  queueSync();
 }
-function resetAdminSpeedLimits(){aaSpeedLimits={};}
+function resetAdminSpeedLimits(){
+  aaSpeedLimits={};
+  aaRepository.list('speedLimits').forEach(item=>aaRepository.remove('speedLimits',item.id));
+  queueSync();
+}
 
 let wizStep=0, journey={mode:'car',limit:70,vehicleType:'Saloon',reg:'',colour:'',driver:'Guest',passengers:1,assets:[],defects:[]};
 
 function startGuest(){
+  setAASession(null);
   wizStep=0;journey={mode:'car',limit:70,vehicleType:'Saloon',reg:'',colour:'',driver:'Guest',passengers:1,assets:[],defects:[]};
   navigate('wizard');renderWiz();
 }
@@ -1709,7 +2275,9 @@ function finishWizard(){startJourney();}
 let map=null,userMarker=null,hazardMarkers=new Map(),routeSource=null,routeLayer=null,reportPinMarker=null;
 let mapStartupTimer=null;
 let mapFallbackStage=0,mapFallbackSwitching=false,mapResourceErrors=0,mapFallbackGraceUntil=0;
-let mapProvider='openstreetmap',mapRenderer=null,mapboxConfigStatus='idle',mapboxConfigPromise=null,forceOpenStreetMap=false;
+let mapProvider='mapbox',mapRenderer=null,mapboxConfigStatus='idle',mapboxConfigPromise=null,forceOpenStreetMap=false;
+let mapboxStyleRetryCount=0;
+const MAPBOX_STYLE_RETRY_LIMIT=1;
 let posIdx=0,routePts=[],routeCumulativeMeters=[],routeTotalMeters=0,routeDurationSeconds=0;
 let curPos={lat:3.8480,lng:11.5021};
 let liveSpeed=0,recordingTimer=null,geoWatchId=null,lastGeoFix=null,recordingStartedAt=0;
@@ -1742,7 +2310,7 @@ function loadMapboxConfig(){
       return true;
     })
     .catch(error=>{
-      console.warn('Mapbox configuration unavailable; using OpenStreetMap fallback:',error.message);
+      console.warn('Mapbox is unavailable; using the OpenStreetMap fallback:',error.message);
       mapboxConfigStatus='unavailable';
       return false;
     });
@@ -1890,6 +2458,7 @@ function initMap(){
   mapFallbackSwitching=false;
   mapResourceErrors=0;
   mapFallbackGraceUntil=0;
+  if(mapProvider==='mapbox')mapboxStyleRetryCount=0;
   setMapState('loading');
   if(!mapRenderer){
     setMapState('error','Map could not start','Reload the app to restore the bundled map engine.');
@@ -1930,6 +2499,7 @@ function initMap(){
     clearTimeout(mapStartupTimer);
     mapFallbackSwitching=false;
     mapResourceErrors=0;
+    if(mapProvider==='mapbox')mapboxStyleRetryCount=0;
     mapFallbackGraceUntil=Date.now()+2000;
     restoreMapOperationalLayersWhenReady();
     setTimeout(restoreMapOperationalLayersWhenReady,500);
@@ -2014,6 +2584,24 @@ function activateMapFallback(reason='map unavailable'){
   clearTimeout(mapStartupTimer);
   console.warn(`Map fallback stage ${mapFallbackStage+1}: ${reason}`);
 
+  if(mapFallbackStage===0&&mapProvider==='mapbox'&&mapboxStyleRetryCount<MAPBOX_STYLE_RETRY_LIMIT){
+    mapboxStyleRetryCount++;
+    mapResourceErrors=0;
+    setMapState('loading','Retrying Mapbox','The navigation style did not finish loading. Retrying Mapbox before opening the backup map.');
+    updateMapNotice();
+    try{
+      map.setStyle(getMapStyle(theme));
+      mapFallbackSwitching=false;
+      scheduleMapStartupFallback();
+      restoreMapOperationalLayersWhenReady();
+    }catch(error){
+      console.warn('Mapbox style retry could not start:',error);
+      mapFallbackSwitching=false;
+      setTimeout(()=>activateMapFallback('Mapbox retry failed'),0);
+    }
+    return;
+  }
+
   if(mapFallbackStage===0){
     mapFallbackStage=1;
     mapResourceErrors=0;
@@ -2070,12 +2658,45 @@ function retryMap(){
   mapResourceErrors=0;
   mapFallbackGraceUntil=0;
   forceOpenStreetMap=false;
+  mapboxStyleRetryCount=0;
   if(map){
     map.remove();
     map=null;
     userMarker=null;
     reportPinMarker=null;
     hazardMarkers.clear();
+  }
+  initMap();
+}
+
+function restoreMapboxDefault(){
+  forceOpenStreetMap=false;
+  if(mapProvider==='mapbox'&&mapFallbackStage===0){
+    initMap();
+    return;
+  }
+  if(mapboxConfigStatus==='idle'||mapboxConfigStatus==='loading'){
+    setMapState('loading','Loading Mapbox','Preparing secure navigation maps for your journey.');
+    loadMapboxConfig().then(restoreMapboxDefault);
+    return;
+  }
+  if(mapboxConfigStatus!=='ready'){
+    initMap();
+    return;
+  }
+  clearTimeout(mapStartupTimer);
+  mapFallbackStage=0;
+  mapFallbackSwitching=false;
+  mapResourceErrors=0;
+  mapFallbackGraceUntil=0;
+  mapboxStyleRetryCount=0;
+  if(map){
+    const previousMap=map;
+    map=null;
+    userMarker=null;
+    reportPinMarker=null;
+    hazardMarkers.clear();
+    try{previousMap.remove();}catch(error){console.warn('Backup map cleanup failed:',error);}
   }
   initMap();
 }
@@ -2101,7 +2722,11 @@ if('ResizeObserver' in window){
 window.addEventListener('orientationchange',requestMapResize);
 window.addEventListener('resize',requestMapResize);
 if(window.visualViewport)window.visualViewport.addEventListener('resize',requestMapResize);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentScreen==='journey')requestMapResize();});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden||currentScreen!=='journey')return;
+  if(mapProvider!=='mapbox'||mapFallbackStage!==0)restoreMapboxDefault();
+  else requestMapResize();
+});
 
 function updateRouteLayer(){
   if(!map||!map.getSource('route'))return;
@@ -2127,6 +2752,9 @@ function startJourney(){
   journeyActive=false;recording=false;posIdx=0;window._arrived=false;
   selectedDestination=null;hasMovedDuringJourney=false;
   warnedHazardIds=new Set();hideHazardAlert();
+  hazardsVisible=true;
+  $('fabHazard').classList.add('active');
+  syncHazardMarkers();
   curPos={lat:routePts[0].lat,lng:routePts[0].lng};
   violations=0;maxSpeed=0;distKm=0;durSec=0;avgSum=0;avgCount=0;liveSpeed=0;wasViolating=false;
   speedSamples=[];lastGeoFix=null;recordingStartedAt=0;
@@ -2415,9 +3043,16 @@ function openNavOverlay(){
       <div><div class="city-name">${c.name}</div><div class="city-region">${c.region}</div></div>
     </button>`).join('');
   $('navOverlay').classList.add('show');
+  if(!(window.history.state&&window.history.state.aaOverlay==='nav')){
+    historyDepth+=1;
+    window.history.pushState({aaScreen:'journey',aaOverlay:'nav',aaDepth:historyDepth},'',window.location.href);
+  }
   $('navSearchInput').value='';$('navSearchInput').focus();
 }
-function closeNavOverlay(){$('navOverlay').classList.remove('show');}
+function closeNavOverlay(){
+  $('navOverlay').classList.remove('show');
+  if(window.history.state&&window.history.state.aaOverlay==='nav')window.history.back();
+}
 function filterCities(){
   const q=$('navSearchInput').value.toLowerCase();
   const list=$('cityList');
@@ -2598,7 +3233,7 @@ async function buildRouteTo(dest,{reroute=false}={}){
 }
 
 /* ---- Hazards ---- */
-let hazardsVisible=false;
+let hazardsVisible=true;
 function escapeHTML(value){
   return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
@@ -2624,6 +3259,7 @@ function hazardPopupHTML(h){
 }
 function syncHazardMarkers(){
   if(!map)return;
+  $('fabHazard').classList.toggle('active',hazardsVisible);
   const activeIds=new Set(hazards.filter(h=>h.status==='active').map(h=>h.id));
   hazardMarkers.forEach((marker,id)=>{
     if(!activeIds.has(id)){marker.remove();hazardMarkers.delete(id);}
@@ -2677,6 +3313,8 @@ function confirmHazard(id,isStillThere){
     showToast('Thanks — hazard removed');
   }
   if(currentAlertHazardId===id)hideHazardAlert();
+  aaRepository.upsert('incidents',h);
+  queueSync();
   syncHazardMarkers();
 }
 function distanceKm(a,b){
@@ -2753,7 +3391,10 @@ function toggleRecord(){
 function toggleSheet(){$('bottomSheet').classList.toggle('expanded');}
 
 function endJourney(message='Journey saved'){
+  const session=getAASession();
   lastJourneyReport={
+    id:ArriveAliveRepository.normaliseRecord({},'journeys').id,
+    ownerId:session?`user-${session.phone}`:null,
     endedAt:new Date().toISOString(),
     driver:journey.driver,
     mode:journey.mode,
@@ -2768,6 +3409,8 @@ function endJourney(message='Journey saved'){
     samples:speedSamples.slice()
   };
   window.__lastJourneyReport=lastJourneyReport;
+  if(session)aaRepository.upsert('journeys',lastJourneyReport);
+  if(session)queueSync();
   journeyActive=false;stopMotionTracking();
   liveSpeed=0;
   $('flashOverlay').classList.remove('active');wasViolating=false;
@@ -2783,24 +3426,29 @@ function endJourney(message='Journey saved'){
   $('bottomSheet').classList.remove('nav-active');
   navActive=false;
   updateStats();
-  resetNavigation('score');
+  if(isRegisteredAccessAllowed()){
+    resetNavigation('score');
+  }else{
+    resetNavigation('wizard');
+    renderWiz();
+  }
   showToast(message);
 }
 
 /* ============================================================
-   SCOREBOARD
+   PROFILE + SPEED BOARD
    ============================================================ */
-const AGENCIES=[
-  {name:'Amour Mezam',region:'Bamenda — NW',score:70,violations:18},
-  {name:'Budem',region:'Bamenda — NW',score:85,violations:9},
-  {name:'Guarantee Express',region:'Yaoundé — CE',score:85,violations:9},
-  {name:'Meta Express',region:'Bamenda — NW',score:85,violations:7},
-  {name:'Touristique Express',region:'Yaoundé — CE',score:100,violations:0},
-  {name:'General Express',region:'Douala — LT',score:100,violations:0},
-  {name:'Agency A',region:'Bafoussam — W',score:100,violations:0},
-  {name:'Agency B',region:'Garoua — N',score:100,violations:0},
-  {name:'Agency C',region:'Buea — SW',score:100,violations:0},
-  {name:'Agency D',region:'Kribi — S',score:100,violations:0}
+let AGENCIES=[
+  {id:'agency-amour-mezam',name:'Amour Mezam',region:'Bamenda — NW',score:70,violations:18},
+  {id:'agency-budem',name:'Budem',region:'Bamenda — NW',score:85,violations:9},
+  {id:'agency-guarantee',name:'Guarantee Express',region:'Yaoundé — CE',score:85,violations:9},
+  {id:'agency-meta',name:'Meta Express',region:'Bamenda — NW',score:85,violations:7},
+  {id:'agency-touristique',name:'Touristique Express',region:'Yaoundé — CE',score:100,violations:0},
+  {id:'agency-general',name:'General Express',region:'Douala — LT',score:100,violations:0},
+  {id:'agency-a',name:'Agency A',region:'Bafoussam — W',score:100,violations:0},
+  {id:'agency-b',name:'Agency B',region:'Garoua — N',score:100,violations:0},
+  {id:'agency-c',name:'Agency C',region:'Buea — SW',score:100,violations:0},
+  {id:'agency-d',name:'Agency D',region:'Kribi — S',score:100,violations:0}
 ];
 const VIOLATIONS=[
   {plate:'NW 1234 AB',agency:'Amour Mezam',speed:112,limit:90,where:'N1 near Bafoussam',when:'Today, 08:14'},
@@ -2813,32 +3461,257 @@ const VIOLATIONS=[
   {plate:'CE 0123 OP',agency:'Budem',speed:102,limit:80,where:'Yaoundé — Bafoussam',when:'3 days ago'}
 ];
 
-function renderScoreboard(){
+function getProfileInitials(name){
+  return String(name||'Account').trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase()||'AA';
+}
+function renderProfile(){
+  const session=getAASession();
+  if(!session)return;
+  const isAdmin=session.role==='admin';
+  const profile=aaRepository.list('profiles',item=>item.ownerId===`user-${session.phone}`)[0];
+  renderProfilePhoto(profile?.photoDataUrl||'',session.name);
+  $('profileDisplayName').textContent=session.name;
+  $('profileRole').textContent=isAdmin?'Administrator':'Registered user';
+  $('profileName').value=session.name;
+  $('profilePhone').value=session.phone;
+  $('profilePhone').readOnly=isAdmin;
+  $('profilePhoneHelp').textContent=isAdmin?'Administrator sign-in identity cannot be changed.':'Used as your sign-in identity.';
+  $('profileError').classList.remove('show');
+  $('profileSuccess').classList.remove('show');
+  renderJourneyHistory(session);
+}
+function renderProfilePhoto(photoDataUrl,name){
+  const avatar=$('profileAvatar'),preview=$('profilePhotoPreview');
+  avatar.replaceChildren();
+  if(photoDataUrl){
+    const image=document.createElement('img');
+    image.src=photoDataUrl;image.alt='';avatar.appendChild(image);
+    preview.src=photoDataUrl;preview.hidden=false;
+  }else{
+    avatar.textContent=getProfileInitials(name);
+    preview.removeAttribute('src');preview.hidden=true;
+  }
+}
+function handleProfilePhoto(event){
+  const file=event.target.files?.[0];
+  const error=$('profileError');
+  error.classList.remove('show');
+  if(!file)return;
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
+    error.textContent='Choose a JPEG, PNG or WebP image.';error.classList.add('show');event.target.value='';return;
+  }
+  if(file.size>1024*1024){
+    error.textContent='Profile photos must be 1 MB or smaller.';error.classList.add('show');event.target.value='';return;
+  }
+  event.target._selectedFile=file;
+  const reader=new FileReader();
+  reader.onerror=()=>{error.textContent='The photo could not be read.';error.classList.add('show');};
+  reader.onload=()=>{
+    event.target.dataset.photoDataUrl=String(reader.result);
+    renderProfilePhoto(String(reader.result),getAASession()?.name);
+  };
+  reader.readAsDataURL(file);
+}
+function renderJourneyHistory(session){
+  const journeys=aaRepository.list('journeys',item=>item.ownerId===`user-${session.phone}`)
+    .sort((a,b)=>Date.parse(b.endedAt)-Date.parse(a.endedAt));
+  $('journeyHistoryCount').textContent=`${journeys.length} journey${journeys.length===1?'':'s'}`;
+  $('journeyHistory').innerHTML=journeys.length?journeys.map(item=>`
+    <article class="history-card" data-testid="journey-history-${escapeHTML(item.id)}">
+      <div class="history-card-head"><span>${escapeHTML((item.mode||'journey').replace(/^./,c=>c.toUpperCase()))}</span><time datetime="${escapeHTML(item.endedAt)}">${new Date(item.endedAt).toLocaleDateString()}</time></div>
+      <div class="history-card-meta">
+        <span><strong>${Number(item.summary?.distanceKm||0).toFixed(1)} km</strong>Distance</span>
+        <span><strong>${fmtDur(item.summary?.durationSeconds||0)}</strong>Duration</span>
+        <span><strong>${item.summary?.violations||0}</strong>Violations</span>
+      </div>
+    </article>`).join(''):'<div class="empty-state">Completed journeys will appear here.</div>';
+}
+async function saveProfile(){
+  const session=getAASession();
+  if(!session||!isRegisteredAccessAllowed()){openAuthGate('profile');return;}
+  const name=$('profileName').value.trim().replace(/\s+/g,' ');
+  const requestedPhone=$('profilePhone').value.trim();
+  const phone=session.role==='admin'?session.phone:requestedPhone;
+  const error=$('profileError');
+  const success=$('profileSuccess');
+  error.classList.remove('show');success.classList.remove('show');
+  if(name.length<2){
+    error.textContent='Enter a full name with at least 2 characters.';
+    error.classList.add('show');
+    return;
+  }
+  if(session.role!=='admin'&&!/^[+0-9][0-9\s()-]{5,23}$/.test(phone)){
+    error.textContent='Enter a valid phone number with at least 6 digits.';
+    error.classList.add('show');
+    return;
+  }
+  if(APP_API_URL&&session.token){
+    try{
+      await callAppApi('/api/profile',{method:'PATCH',token:session.token,body:{displayName:name,phone}});
+      const photoFile=$('profilePhoto')._selectedFile;
+      if(photoFile){
+        const form=new FormData();form.append('photo',photoFile);
+        const response=await fetch(`${APP_API_URL}/api/profile/photo`,{method:'POST',headers:{'Authorization':`Bearer ${session.token}`},body:form});
+        if(!response.ok){let payload={};try{payload=await response.json()}catch(_){}throw new Error(payload.error||'Profile photo upload failed');}
+      }
+    }catch(apiError){error.textContent=apiError.message;error.classList.add('show');return;}
+  }
+  const users=getAAUsers();
+  if(session.role!=='admin'){
+    const phoneDigits=phone.replace(/\D/g,'');
+    if(phoneDigits.length<6){
+      error.textContent='Enter a valid phone number with at least 6 digits.';
+      error.classList.add('show');
+      return;
+    }
+    if(phone!==session.phone&&users[phone]){
+      error.textContent='An account with this phone number already exists.';
+      error.classList.add('show');
+      return;
+    }
+    const storedUser=users[session.phone]||{phone:session.phone,role:'user'};
+    if(phone!==session.phone){
+      delete users[session.phone];
+      aaRepository.remove('users',`user-${session.phone}`);
+      aaRepository.list('journeys',item=>item.ownerId===`user-${session.phone}`).forEach(item=>aaRepository.upsert('journeys',{...item,ownerId:`user-${phone}`}));
+    }
+    users[phone]={...storedUser,name,phone,role:storedUser.role||'user'};
+  }else{
+    const storedAdmin=users[session.phone]||{phone:session.phone,role:'admin'};
+    users[session.phone]={...storedAdmin,name,phone:session.phone,role:'admin'};
+  }
+  saveAAUsers(users);
+  setAASession({...session,name,phone,role:session.role});
+  const existingProfile=aaRepository.list('profiles',item=>item.ownerId===`user-${session.phone}`)[0];
+  const pendingPhoto=$('profilePhoto').dataset.photoDataUrl;
+  aaRepository.upsert('profiles',{
+    ...(existingProfile||{}),id:existingProfile?.id||`profile-${phone}`,ownerId:`user-${phone}`,
+    name,phone,photoDataUrl:pendingPhoto||existingProfile?.photoDataUrl||''
+  });
+  delete $('profilePhoto').dataset.photoDataUrl;
+  delete $('profilePhoto')._selectedFile;
+  queueSync();
+  journey.driver=name;
+  renderProfilePhoto(pendingPhoto||existingProfile?.photoDataUrl||'',name);
+  $('profileDisplayName').textContent=name;
+  $('profilePhone').value=phone;
+  success.textContent='Profile updated.';
+  success.classList.add('show');
+  showToast('Profile updated');
+}
+
+function renderSpeedBoard(){
   const list=$('rankList');
   const sorted=[...AGENCIES].sort((a,b)=>b.score-a.score);
   list.innerHTML=sorted.map((a,i)=>{
-    const c=a.score===100?'var(--aa-success)':a.score>=85?'var(--aa-amber)':'var(--aa-destructive)';
-    return `<div class="rank-row">
-      <div class="rank-pos ${i<3?'top':''}">${i+1}</div>
+    const perfect=a.score===100;
+    return `<div class="rank-row ${perfect?'perfect':''}" data-testid="agency-row-${i}">
+      <div class="rank-pos">${i+1}</div>
       <div class="rank-info"><div class="rank-name">${a.name}</div><div class="rank-meta">${a.region} · ${a.violations} violations</div></div>
-      <div class="score-bar"><div class="score-fill" style="width:${a.score}%;background:${c}"></div></div>
-      <div class="rank-score" style="color:${c}">${a.score}</div>
+      <div class="rank-score"><strong>${a.score}</strong><span class="${perfect?'trusted-mark':''}">${perfect?'✓ Trusted':'Safety score'}</span></div>
     </div>`;
   }).join('');
-  renderViolations();
+  renderSpeedingVehicles();
 }
-function renderViolations(){
+function renderSpeedingVehicles(){
   $('violationList').innerHTML=VIOLATIONS.map(v=>`
-    <div class="violation-card">
-      <div class="violation-top"><span class="violation-plate">${v.plate}</span><span class="violation-speed">${v.speed} km/h in ${v.limit} zone</span></div>
-      <div class="violation-detail">${v.agency} · ${v.where} · ${v.when}</div>
+    <div class="violation-card" data-testid="speeding-vehicle-${v.plate.replace(/\s+/g,'-')}">
+      <div class="violation-top"><span class="violation-plate">${v.plate}</span><span class="violation-over">+${v.speed-v.limit} km/h</span></div>
+      <div class="violation-metrics">
+        <div class="violation-metric"><span>Measured</span><strong>${v.speed} km/h</strong></div>
+        <div class="violation-metric"><span>Limit</span><strong>${v.limit} km/h</strong></div>
+        <div class="violation-metric"><span>Over by</span><strong>${v.speed-v.limit} km/h</strong></div>
+      </div>
+      <div class="violation-detail"><span><strong>Agency:</strong> ${v.agency}</span><span><strong>Route:</strong> ${v.where}</span><span><strong>Time:</strong> ${v.when}</span></div>
     </div>`).join('');
 }
 function switchTab(btn,tabId){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false')});
   btn.classList.add('active');
+  btn.setAttribute('aria-selected','true');
   $('tab-agencies').style.display=tabId==='tab-agencies'?'block':'none';
   $('tab-violations').style.display=tabId==='tab-violations'?'block':'none';
+}
+
+function renderAdmin(){
+  if(!isAdminAccessAllowed()){navigate('profile',{replace:true});return;}
+  const users=aaRepository.list('users');
+  const reports=hazards.filter(item=>item.source==='community');
+  $('adminMetrics').innerHTML=[
+    ['Users',users.length],['Journeys',aaRepository.list('journeys').length],
+    ['Active reports',reports.filter(item=>item.status==='active').length],['Trusted agencies',AGENCIES.filter(item=>item.score===100).length]
+  ].map(([label,value])=>`<div class="admin-metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+  $('adminUsers').innerHTML=users.length?users.map(user=>`
+    <div class="admin-row" data-testid="admin-user-${escapeHTML(user.phone||user.id)}">
+      <div class="admin-row-copy"><strong>${escapeHTML(user.name)}</strong><span>${escapeHTML(user.phone)} · ${escapeHTML(user.role||'user')}</span></div>
+      ${user.role==='admin'?'':`<button type="button" class="admin-control" onclick="toggleUserStatus('${escapeHTML(user.id)}')">${user.status==='suspended'?'Enable':'Suspend'}</button>`}
+    </div>`).join(''):'<div class="empty-state">No registered users on this device.</div>';
+  $('adminReports').innerHTML=reports.length?reports.slice().reverse().map(report=>`
+    <div class="admin-row" data-testid="admin-report-${escapeHTML(report.id)}">
+      <div class="admin-row-copy"><strong>${escapeHTML(report.label)}</strong><span>${escapeHTML(report.status)} · ${new Date(report.updatedAt).toLocaleString()}</span></div>
+      <button type="button" class="admin-control" onclick="moderateReport('${escapeHTML(report.id)}','${report.status==='active'?'resolved':'active'}')">${report.status==='active'?'Resolve':'Reactivate'}</button>
+    </div>`).join(''):'<div class="empty-state">No community reports to moderate.</div>';
+  $('adminAgencies').innerHTML=AGENCIES.map(agency=>`
+    <div class="admin-row" data-testid="admin-agency-${escapeHTML(agency.id)}">
+      <div class="admin-row-copy"><strong>${escapeHTML(agency.name)}</strong><span>${agency.score} safety score · ${agency.score===100?'Trusted':'Standard'}</span></div>
+      <button type="button" class="admin-control" onclick="toggleAgencyTrusted('${escapeHTML(agency.id)}')">${agency.score===100?'Remove trust':'Trust'}</button>
+    </div>`).join('');
+  $('adminSpeedLimits').innerHTML=MODES.map(mode=>`
+    <label class="admin-row"><span>${escapeHTML(mode.label)} limit</span>
+      <select class="admin-control" onchange="setAdminSpeedLimit('${mode.id}',this.value);renderAdmin()" data-testid="select-speed-limit-${mode.id}">
+        ${[30,40,50,60,70,80,90].map(limit=>`<option value="${limit}" ${getAdminSpeedLimit(mode.id)===limit?'selected':''}>${limit} km/h</option>`).join('')}
+      </select>
+    </label>`).join('');
+  renderSyncHealth();
+}
+function toggleUserStatus(id){
+  const publicUser=aaRepository.list('users',item=>item.id===id)[0];
+  if(!publicUser)return;
+  const phone=publicUser.phone,users=getAAUsers(),user=users[phone];
+  const status=publicUser.status==='suspended'?'active':'suspended';
+  aaRepository.upsert('users',{...publicUser,status});
+  if(user){
+    user.status=status;
+    aaUsers=users;writeLocalAuth(users);
+  }
+  queueSync();renderAdmin();
+}
+function moderateReport(id,status){
+  const report=hazards.find(item=>item.id===id);
+  if(!report)return;
+  report.status=status;report.updatedAt=new Date().toISOString();
+  if(status==='resolved')report.resolvedAt=report.updatedAt;else delete report.resolvedAt;
+  aaRepository.upsert('incidents',report);syncHazardMarkers();queueSync();renderAdmin();
+}
+function toggleAgencyTrusted(id){
+  const agency=AGENCIES.find(item=>item.id===id);
+  if(!agency)return;
+  agency.score=agency.score===100?85:100;
+  aaRepository.upsert('agencies',agency);queueSync();renderAdmin();
+}
+function addAgency(){
+  const name=$('adminAgencyName').value.trim();
+  const score=Math.max(0,Math.min(100,Number($('adminAgencyScore').value)));
+  if(!name){showToast('Enter an agency name');return;}
+  const agency=aaRepository.upsert('agencies',{name,region:'Managed locally',score,violations:0});
+  AGENCIES.push(agency);
+  $('adminAgencyName').value='';queueSync();renderAdmin();showToast('Agency added');
+}
+function hydrateRepositoryData(){
+  const publicUserIds=new Set(aaRepository.list('users').map(user=>user.id));
+  Object.values(getAAUsers()).filter(user=>!publicUserIds.has(`user-${user.phone}`)).forEach(user=>aaRepository.upsert('users',{
+    id:`user-${user.phone}`,name:user.name,phone:user.phone,role:user.role||'user',
+    status:user.status||'active',createdAt:new Date(user.createdAt||Date.now()).toISOString()
+  }));
+  const storedAgencies=aaRepository.list('agencies');
+  if(storedAgencies.length)AGENCIES=storedAgencies;
+  else AGENCIES.forEach(agency=>aaRepository.upsert('agencies',agency));
+  const storedIncidents=aaRepository.list('incidents');
+  storedIncidents.forEach(incident=>{
+    const index=hazards.findIndex(item=>item.id===incident.id);
+    if(index>=0)hazards[index]=incident;else hazards.push(incident);
+  });
+  aaSpeedLimits=Object.fromEntries(aaRepository.list('speedLimits').map(item=>[item.mode,item.limit]));
 }
 
 /* ============================================================
@@ -2951,13 +3824,16 @@ function submitReport(){
     const incident=INCIDENTS[selectedIncident];
     const now=new Date().toISOString();
     const description=$('reportDesc').value.trim()||`${incident.label} reported by a road user.`;
-    hazards.push({
+    const report={
       id:`community-hz-${++hazardSequence}`,
       type:incident.type,label:incident.label,description,
       lat:reportLocation.lat,lng:reportLocation.lng,status:'active',
       createdAt:now,updatedAt:now,lastConfirmedAt:now,
-      stillThere:1,notThere:0,source:'community'
-    });
+      stillThere:1,notThere:0,source:'community',reporterId:getAASession()?`user-${getAASession().phone}`:null
+    };
+    hazards.push(report);
+    aaRepository.upsert('incidents',report);
+    queueSync();
     hazardsVisible=true;
     $('fabHazard').classList.add('active');
     syncHazardMarkers();
@@ -2972,7 +3848,21 @@ function submitReport(){
 
 /* Init */
 window.addEventListener('load',()=>{
+  hydrateRepositoryData();
+  aaRepository.sync(getAASession()?.role||'user').then(()=>{hydrateRepositoryData();renderSyncHealth();});
+  loadMapboxConfig();
   if(window.speechSynthesis)window.speechSynthesis.getVoices();
+  const hash=window.location.hash.toLowerCase();
+  const directTarget=hash==='#score'?'score':hash==='#profile'?'profile':hash==='#admin'?'admin':null;
+  if(directTarget==='admin'&&!isAdminAccessAllowed()){
+    window.history.replaceState({aaScreen:'access',aaDepth:0},'',window.location.pathname+window.location.search);
+    setTimeout(()=>showToast('Administrator access required'),2100);
+  }else
+  if(directTarget&&!isRegisteredAccessAllowed()){
+    window.history.replaceState({aaScreen:'access',aaDepth:0},'',window.location.pathname+window.location.search);
+    setTimeout(()=>openAuthGate(directTarget),2100);
+  }
+  setTimeout(maybeOpenFirstVisitGuide,2200);
   // Check for existing session (auto-login on reload)
   setTimeout(()=>checkSessionOnLoad(),2600); // After splash fades
 });

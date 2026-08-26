@@ -1,0 +1,8 @@
+flutter_app/
+tests/
+qa-*.html
+tmp-*.js
+*.txt
+*.zip
+inline-app-check.js
+web-update-report-*.txt

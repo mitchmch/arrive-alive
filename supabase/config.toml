@@ -1,0 +1,3 @@
+[functions.app-api]
+# Authentication uses opaque bearer tokens hashed in app_sessions, not Supabase JWTs.
+verify_jwt = false

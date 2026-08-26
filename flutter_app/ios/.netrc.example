@@ -1,0 +1,13 @@
+# Mapbox iOS SDK downloads token
+#
+# 1. Go to https://account.mapbox.com/ -> Tokens -> Create secret token
+# 2. Select the "Downloads: Read" scope
+# 3. Copy the secret token (starts with sk.)
+# 4. Save this file as ~/.netrc (in your home directory) with your token
+# 5. Run: chmod 600 ~/.netrc (for security)
+#
+# The Mapbox iOS SDK (CocoaPods) reads this file to authenticate SDK downloads.
+
+machine api.mapbox.com
+login mapbox
+password YOUR_SECRET_MAPBOX_TOKEN_HERE

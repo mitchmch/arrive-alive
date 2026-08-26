@@ -1,0 +1,95 @@
+import 'package:arrive_alive/controllers/auth_controller.dart';
+import 'package:arrive_alive/controllers/scoreboard_controller.dart';
+import 'package:arrive_alive/core/theme.dart';
+import 'package:arrive_alive/models/agency.dart';
+import 'package:arrive_alive/models/user.dart';
+import 'package:arrive_alive/models/violation.dart';
+import 'package:arrive_alive/screens/scoreboard_screen.dart';
+import 'package:arrive_alive/widgets/bottom_nav.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  testWidgets('Speed Board uses clear labels and over-limit values',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final user = AppUser(id: 1, phone: '670000000', role: 'user');
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authProvider.overrideWith(
+            (ref) => AuthController(
+              initialState: AuthState(user: user),
+              loadStoredUser: false,
+            ),
+          ),
+          agenciesProvider.overrideWith(
+            (ref) async => [
+              Agency(id: 1, name: 'Safe Transit', safetyScore: 100),
+            ],
+          ),
+          publishedViolationsProvider.overrideWith(
+            (ref) async => [
+              Violation(
+                id: 1,
+                journeyId: 1,
+                vehicleReg: 'LT 123 AA',
+                mode: 'bus',
+                speed: 85,
+                speedLimit: 60,
+                lat: 0,
+                lng: 0,
+                timestamp: '2026-08-26T10:00:00Z',
+              ),
+            ],
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const ScoreboardScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Speed Board'), findsOneWidget);
+    expect(find.text('Trusted agencies'), findsWidgets);
+    expect(find.text('Trusted'), findsOneWidget);
+
+    await tester.tap(find.text('Speeding vehicles'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('+25 km/h over'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('narrow admin bottom navigation does not overflow',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: Scaffold(
+          bottomNavigationBar: BottomNav(
+            currentIndex: 1,
+            role: 'admin',
+            isGuest: false,
+            onTap: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Speed Board'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
