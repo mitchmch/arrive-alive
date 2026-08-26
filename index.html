@@ -8,7 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
-<!-- MapLibre GL JS: tokenless vector maps with broad mobile-browser support -->
+<!-- Mapbox GL is the primary renderer; bundled MapLibre remains the offline-compatible fallback. -->
+<link rel="stylesheet" href="vendor/mapbox-gl.css"/>
+<script src="vendor/mapbox-gl.js"></script>
 <link rel="stylesheet" href="vendor/maplibre-gl.css"/>
 <script src="vendor/maplibre-gl.js"></script>
 <style>
@@ -1479,7 +1481,7 @@ function updateThemeControls(){
 function updateMapNotice(){
   if(!$('mapNotice'))return;
   const period=theme==='light'?'day':'night';
-  const provider=mapFallbackStage===1?'Backup map':mapFallbackStage===2?'Limited map':'OpenStreetMap';
+  const provider=mapFallbackStage===0&&mapProvider==='mapbox'?'Mapbox Navigation':mapFallbackStage===2?'Limited map':'OpenStreetMap fallback';
   $('mapNotice').textContent=`${provider} · ${period} mode`;
 }
 function applyTheme(nextTheme,{updateMap=true}={}){
@@ -1502,6 +1504,14 @@ function toggleTheme(){
   applyTheme(theme==='light'?'dark':'light');
 }
 function getMapStyle(mapTheme=theme){
+  if(mapProvider==='mapbox'){
+    return mapTheme==='light'
+      ?'mapbox://styles/mapbox/navigation-day-v1'
+      :'mapbox://styles/mapbox/navigation-night-v1';
+  }
+  return getOpenStreetMapStyle(mapTheme);
+}
+function getOpenStreetMapStyle(mapTheme=theme){
   const dark=mapTheme==='dark';
   return {
     version:8,
@@ -1530,9 +1540,7 @@ function getMapStyle(mapTheme=theme){
   };
 }
 function getBackupMapStyle(mapTheme=theme){
-  return mapTheme==='light'
-    ?'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
-    :'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+  return getOpenStreetMapStyle(mapTheme);
 }
 function getLimitedMapStyle(mapTheme=theme){
   return {
@@ -1700,7 +1708,8 @@ function finishWizard(){startJourney();}
    ============================================================ */
 let map=null,userMarker=null,hazardMarkers=new Map(),routeSource=null,routeLayer=null,reportPinMarker=null;
 let mapStartupTimer=null;
-let mapFallbackStage=0,mapFallbackSwitching=false,mapResourceErrors=0;
+let mapFallbackStage=0,mapFallbackSwitching=false,mapResourceErrors=0,mapFallbackGraceUntil=0;
+let mapProvider='openstreetmap',mapRenderer=null,mapboxConfigStatus='idle',mapboxConfigPromise=null,forceOpenStreetMap=false;
 let posIdx=0,routePts=[],routeTotalKm=0;
 let curPos={lat:3.8480,lng:11.5021};
 let liveSpeed=0,recordingTimer=null,geoWatchId=null,lastGeoFix=null,recordingStartedAt=0;
@@ -1712,6 +1721,29 @@ let speedSamples=[],lastJourneyReport=null;
 const MOTION_THRESHOLD_KMH=3;
 const MAX_DERIVED_SPEED_KMH=220;
 const MAX_DERIVED_ACCURACY_M=65;
+
+function loadMapboxConfig(){
+  if(mapboxConfigPromise)return mapboxConfigPromise;
+  mapboxConfigStatus='loading';
+  mapboxConfigPromise=fetch('/api/mapbox-config',{cache:'no-store'})
+    .then(response=>{
+      if(!response.ok)throw new Error(`Mapbox config returned ${response.status}`);
+      return response.json();
+    })
+    .then(config=>{
+      if(!config||typeof config.token!=='string'||!config.token.startsWith('pk.'))throw new Error('A valid Mapbox public token is not configured');
+      if(typeof mapboxgl==='undefined')throw new Error('The bundled Mapbox renderer is unavailable');
+      mapboxgl.accessToken=config.token;
+      mapboxConfigStatus='ready';
+      return true;
+    })
+    .catch(error=>{
+      console.warn('Mapbox configuration unavailable; using OpenStreetMap fallback:',error.message);
+      mapboxConfigStatus='unavailable';
+      return false;
+    });
+  return mapboxConfigPromise;
+}
 
 /* Default route: Yaoundé → Bamenda corridor */
 const ROUTE=[
@@ -1843,11 +1875,19 @@ function initMap(){
     requestMapResize();
     return;
   }
-  mapFallbackStage=0;
+  if(mapboxConfigStatus==='idle'||mapboxConfigStatus==='loading'){
+    setMapState('loading','Loading Mapbox','Preparing secure navigation maps for your journey.');
+    loadMapboxConfig().then(initMap);
+    return;
+  }
+  mapProvider=mapboxConfigStatus==='ready'&&!forceOpenStreetMap?'mapbox':'openstreetmap';
+  mapRenderer=mapProvider==='mapbox'?window.mapboxgl:window.maplibregl;
+  mapFallbackStage=mapProvider==='mapbox'?0:1;
   mapFallbackSwitching=false;
   mapResourceErrors=0;
+  mapFallbackGraceUntil=0;
   setMapState('loading');
-  if(typeof maplibregl==='undefined'){
+  if(!mapRenderer){
     setMapState('error','Map could not start','Reload the app to restore the bundled map engine.');
     return;
   }
@@ -1864,7 +1904,7 @@ function initMap(){
   updateMapNotice();
 
   try{
-    map=new maplibregl.Map(mapOptions);
+    map=new mapRenderer.Map(mapOptions);
   }catch(error){
     console.warn('Map initialization failed:',error);
     setMapState('error','Map could not start','Tap Retry to load the map again.');
@@ -1886,6 +1926,7 @@ function initMap(){
     clearTimeout(mapStartupTimer);
     mapFallbackSwitching=false;
     mapResourceErrors=0;
+    mapFallbackGraceUntil=Date.now()+2000;
     restoreMapOperationalLayersWhenReady();
     setTimeout(restoreMapOperationalLayersWhenReady,500);
     setMapState('ready');
@@ -1901,7 +1942,7 @@ function initMap(){
     <div class="user-dot-arrow" id="userArrow"></div>
     <div class="user-dot-core"></div>
   `;
-  userMarker=new maplibregl.Marker({element:userEl,anchor:'center'})
+  userMarker=new mapRenderer.Marker({element:userEl,anchor:'center'})
     .setLngLat([curPos.lng,curPos.lat])
     .addTo(map);
 
@@ -1916,6 +1957,7 @@ function initMap(){
   // Handle map errors
   map.on('error',e=>{
     console.warn('Map error:',e);
+    if(mapFallbackSwitching||Date.now()<mapFallbackGraceUntil)return;
     mapResourceErrors++;
     if(!map.isStyleLoaded()||mapResourceErrors>=3)activateMapFallback('resource error');
   });
@@ -1964,6 +2006,7 @@ function settleMapStyleWhenReady(expectedStage,attempt=0){
 function activateMapFallback(reason='map unavailable'){
   if(!map||mapFallbackSwitching)return;
   mapFallbackSwitching=true;
+  mapFallbackGraceUntil=Date.now()+3000;
   clearTimeout(mapStartupTimer);
   console.warn(`Map fallback stage ${mapFallbackStage+1}: ${reason}`);
 
@@ -1972,13 +2015,15 @@ function activateMapFallback(reason='map unavailable'){
     mapResourceErrors=0;
     setMapState('loading','Loading backup map','Switching map sources automatically.');
     updateMapNotice();
-    try{
-      map.setStyle(getBackupMapStyle(theme));
-      settleMapStyleWhenReady(mapFallbackStage);
-    }catch(error){
-      mapFallbackSwitching=false;
-      activateMapFallback('backup map could not start');
-    }
+    forceOpenStreetMap=true;
+    const failedMap=map;
+    map=null;
+    userMarker=null;
+    reportPinMarker=null;
+    hazardMarkers.clear();
+    try{failedMap.remove();}catch(error){console.warn('Mapbox cleanup failed:',error);}
+    mapFallbackSwitching=false;
+    setTimeout(initMap,0);
     return;
   }
 
@@ -2019,10 +2064,14 @@ function retryMap(){
   mapFallbackStage=0;
   mapFallbackSwitching=false;
   mapResourceErrors=0;
+  mapFallbackGraceUntil=0;
+  forceOpenStreetMap=false;
   if(map){
     map.remove();
     map=null;
     userMarker=null;
+    reportPinMarker=null;
+    hazardMarkers.clear();
   }
   initMap();
 }
@@ -2480,9 +2529,9 @@ function syncHazardMarkers(){
     el.setAttribute('aria-label',h.label);
     el.setAttribute('data-testid',`hazard-marker-${h.id}`);
     el.innerHTML=`<span class="hz-pin" style="background:${s.c}"><span aria-hidden="true">${s.e}</span></span>`;
-    const popup=new maplibregl.Popup({offset:25,closeButton:true,closeOnClick:true,maxWidth:'280px'})
+    const popup=new mapRenderer.Popup({offset:25,closeButton:true,closeOnClick:true,maxWidth:'280px'})
       .setHTML(hazardPopupHTML(h));
-    const marker=new maplibregl.Marker({element:el,anchor:'bottom'})
+    const marker=new mapRenderer.Marker({element:el,anchor:'bottom'})
       .setLngLat([h.lng,h.lat]).setPopup(popup);
     hazardMarkers.set(h.id,marker);
     if(hazardsVisible)marker.addTo(map);
@@ -2732,7 +2781,7 @@ function setReportPin(lat,lng){
     el.className='report-pin';
     el.setAttribute('aria-label','Incident report pin');
     el.setAttribute('data-testid','report-map-pin');
-    reportPinMarker=new maplibregl.Marker({element:el,anchor:'bottom',draggable:true})
+    reportPinMarker=new mapRenderer.Marker({element:el,anchor:'bottom',draggable:true})
       .setLngLat([lng,lat]).addTo(map);
     reportPinMarker.on('dragend',()=>{
       const pos=reportPinMarker.getLngLat();

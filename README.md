@@ -63,7 +63,43 @@ Do not open `index.html` directly with a `file://` URL. Map resources, browser p
 
 ## Map configuration
 
-The app uses MapLibre GL JS 4.7.1 and tokenless CARTO vector styles. No Mapbox account, browser token, or Vercel environment variable is required.
+The app uses bundled Mapbox GL JS as its primary map renderer and Mapbox Navigation styles as its default maps:
+
+- `mapbox://styles/mapbox/navigation-day-v1`
+- `mapbox://styles/mapbox/navigation-night-v1`
+
+MapLibre GL and OpenStreetMap remain bundled as an automatic fallback. If Mapbox configuration or Mapbox map requests fail, the app switches to OpenStreetMap and then to a limited route canvas instead of blocking the journey screen.
+
+### Mapbox access token
+
+Create a Mapbox public access token beginning with `pk.`. Give it the public read scopes required for maps, including `styles:read` and `fonts:read`. Never use a secret `sk.` token in the browser.
+
+For Vercel, add the token as an environment variable:
+
+```text
+MAPBOX_ACCESS_TOKEN=pk.your_public_token
+```
+
+Add it to Production, Preview, and Development, then redeploy the project. The serverless endpoint at `api/mapbox-config.js` supplies the public browser token at runtime without committing it to Git.
+
+If the token has URL restrictions, include every hostname from which the app is loaded, for example:
+
+```text
+https://arrive-alive.vercel.app/*
+https://arrivealive.pplx.app/*
+http://localhost:3000/*
+http://127.0.0.1:3000/*
+```
+
+Use the exact Vercel production and preview domains assigned to the project. A missing allowed domain commonly appears as a blank or permanently loading map on deployed mobile browsers.
+
+For local Mapbox development, use Vercel's local runtime so the serverless configuration endpoint and environment variable are available:
+
+```bash
+npx vercel dev
+```
+
+Running `npx serve` still works, but it intentionally exercises the tokenless OpenStreetMap fallback because it does not run the `/api/mapbox-config` function.
 
 ### Day and night maps
 
@@ -78,8 +114,8 @@ Map styles are configured in `getMapStyle()`:
 
 ```javascript
 return mapTheme === 'light'
-  ? 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
-  : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+  ? 'mapbox://styles/mapbox/navigation-day-v1'
+  : 'mapbox://styles/mapbox/navigation-night-v1';
 ```
 
 Route and hazard layers are restored after every map-style change.
