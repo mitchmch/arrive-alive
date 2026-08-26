@@ -1962,8 +1962,20 @@ async function callAppApi(path,{method='GET',body,token,idempotencyKey}={}){
   if(!APP_API_URL)throw new Error('Durable API is not configured');
   const response=await fetch(`${APP_API_URL}${path}`,{method,headers:{'Accept':'application/json',...(body?{'Content-Type':'application/json'}:{}),...(token?{'Authorization':`Bearer ${token}`}:{}),...(idempotencyKey?{'Idempotency-Key':idempotencyKey}:{})},body:body?JSON.stringify(body):undefined});
   let payload={};try{payload=await response.json()}catch(_){}
-  if(!response.ok)throw new Error(payload.error||`API returned ${response.status}`);
+  if(!response.ok){const error=new Error(payload.error||`API returned ${response.status}`);error.status=response.status;throw error;}
   return payload;
+}
+async function callAuthenticatedGet(path){
+  const token=getAASession()?.token;
+  if(!token)throw new Error('Sign in is required');
+  try{return await callAppApi(path,{token});}
+  catch(error){
+    if(error.status!==401)throw error;
+    await new Promise(resolve=>setTimeout(resolve,180));
+    const latestToken=getAASession()?.token;
+    if(!latestToken)throw error;
+    return callAppApi(path,{token:latestToken});
+  }
 }
 function currentUser(){return getAASession()}
 function isLoggedIn(){return getAASession()!==null}
@@ -3831,9 +3843,9 @@ async function loadSpeedBoardEvidence(){
   if(!APP_API_URL||!session?.token)return;
   try{
     const [entries,rollups,agencies]=await Promise.all([
-      callAppApi('/api/speed-board',{token:session.token}),
-      callAppApi('/api/agency-safety-rollups',{token:session.token}),
-      callAppApi('/api/agencies',{token:session.token}),
+      callAuthenticatedGet('/api/speed-board'),
+      callAuthenticatedGet('/api/agency-safety-rollups'),
+      callAuthenticatedGet('/api/agencies'),
     ]);
     const latest=new Map();
     const periodPriority={daily:3,weekly:2,monthly:1};
@@ -3974,7 +3986,7 @@ function renderAdminAgencies(){
   if(!AGENCIES.length){$('adminAgencies').innerHTML='<div class="empty-state compact">Add an agency to begin.</div>';$('adminAgencyReport').innerHTML='<div class="empty-state">Agency reports appear here.</div>';return;}
   if(!AGENCIES.some(item=>String(item.id)===String(selectedAdminAgencyId)))selectedAdminAgencyId=String(AGENCIES[0].id);
   const agency=AGENCIES.find(item=>String(item.id)===String(selectedAdminAgencyId))||AGENCIES[0];
-  $('adminAgencies').innerHTML=AGENCIES.map(item=>`<button type="button" class="${String(item.id)===String(agency.id)?'active':''}" onclick="selectAdminAgency('${escapeHTML(String(item.id))}')" data-testid="admin-agency-${escapeHTML(String(item.id))}">${escapeHTML(item.name)}<span>${Number(item.score)||0} confidence · ${item.status==='trusted'?'Trusted':item.status==='avoid'?'Avoid':'Under review'}</span></button>`).join('');
+  $('adminAgencies').innerHTML=AGENCIES.map(item=>`<button type="button" class="${String(item.id)===String(agency.id)?'active':''}" onclick="selectAdminAgency('${escapeHTML(String(item.id))}')" data-testid="admin-agency-${escapeHTML(String(item.id))}">${escapeHTML(item.name)}<span>${item.status?Number(item.score)||0:0} confidence · ${item.status==='trusted'?'Trusted':item.status==='avoid'?'Avoid':'Under review'}</span></button>`).join('');
   const snapshot=agencySnapshot(agency);
   $('adminAgencyReport').innerHTML=`
     <div class="agency-report-head">
@@ -3986,7 +3998,7 @@ function renderAdminAgencies(){
       </div>
     </div>
     <div class="agency-metrics">
-      <div class="agency-metric"><span>Safety score</span><strong>${snapshot.metrics.safetyScore}/100</strong></div>
+      <div class="agency-metric"><span>Evidence confidence</span><strong>${agency.status?snapshot.metrics.safetyScore:0}/100</strong></div>
       <div class="agency-metric"><span>Vehicles</span><strong>${snapshot.metrics.vehicles}</strong></div>
       <div class="agency-metric"><span>Journeys</span><strong>${snapshot.metrics.journeys}</strong></div>
       <div class="agency-metric"><span>Violations</span><strong>${snapshot.metrics.violations}</strong></div>
