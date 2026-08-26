@@ -1710,17 +1710,21 @@ let map=null,userMarker=null,hazardMarkers=new Map(),routeSource=null,routeLayer
 let mapStartupTimer=null;
 let mapFallbackStage=0,mapFallbackSwitching=false,mapResourceErrors=0,mapFallbackGraceUntil=0;
 let mapProvider='openstreetmap',mapRenderer=null,mapboxConfigStatus='idle',mapboxConfigPromise=null,forceOpenStreetMap=false;
-let posIdx=0,routePts=[],routeTotalKm=0;
+let posIdx=0,routePts=[],routeCumulativeMeters=[],routeTotalMeters=0,routeDurationSeconds=0;
 let curPos={lat:3.8480,lng:11.5021};
 let liveSpeed=0,recordingTimer=null,geoWatchId=null,lastGeoFix=null,recordingStartedAt=0;
 let journeyActive=false,recording=false,violations=0,maxSpeed=0,distKm=0,durSec=0,avgSum=0,avgCount=0;
-let selectedDestination=null,hasMovedDuringJourney=false;
+  let selectedDestination=null,hasMovedDuringJourney=false;
+let snappedRoutePosition=null,routeProgressMeters=0,offRouteFixes=0,lastRerouteAt=0,isRerouting=false,lastSpokenStepIdx=-1;
 let wasViolating=false;
 let userHeading=0;
 let speedSamples=[],lastJourneyReport=null;
 const MOTION_THRESHOLD_KMH=3;
 const MAX_DERIVED_SPEED_KMH=220;
-const MAX_DERIVED_ACCURACY_M=65;
+  const MAX_DERIVED_ACCURACY_M=65;
+const OFF_ROUTE_THRESHOLD_M=45;
+const OFF_ROUTE_FIXES_REQUIRED=3;
+const REROUTE_COOLDOWN_MS=15000;
 
 function loadMapboxConfig(){
   if(mapboxConfigPromise)return mapboxConfigPromise;
@@ -2116,7 +2120,9 @@ function startJourney(){
   if(routePts.length<2){
     routePts=ROUTE.map(p=>({lat:p[0],lng:p[1]}));
   }
+  rebuildRouteMetrics();
   initMap();
+  primeCurrentLocation();
   stopMotionTracking();
   journeyActive=false;recording=false;posIdx=0;window._arrived=false;
   selectedDestination=null;hasMovedDuringJourney=false;
@@ -2150,6 +2156,19 @@ function stopMotionTracking(){
     geoWatchId=null;
   }
   lastGeoFix=null;
+}
+
+function primeCurrentLocation(){
+  if(!navigator.geolocation)return Promise.resolve(false);
+  return new Promise(resolve=>{
+    navigator.geolocation.getCurrentPosition(position=>{
+      if(!position||!position.coords){resolve(false);return;}
+      curPos={lat:position.coords.latitude,lng:position.coords.longitude};
+      if(userMarker)userMarker.setLngLat([curPos.lng,curPos.lat]);
+      if(map&&map.loaded())map.easeTo({center:[curPos.lng,curPos.lat],zoom:14,duration:500});
+      resolve(true);
+    },()=>resolve(false),{enableHighAccuracy:true,maximumAge:5000,timeout:8000});
+  });
 }
 
 function startMotionTracking(){
@@ -2189,48 +2208,101 @@ function bearingBetween(a,b){
   return (Math.atan2(y,x)/rad+360)%360;
 }
 
-function nearestRouteIndex(position){
-  if(routePts.length<2)return 0;
-  let nearest=Math.floor(posIdx),best=Infinity;
-  for(let i=0;i<routePts.length;i++){
-    const d=distanceKm(position,routePts[i]);
-    if(d<best){best=d;nearest=i;}
+function rebuildRouteMetrics(){
+  routeCumulativeMeters=[0];
+  routeTotalMeters=0;
+  for(let i=0;i<routePts.length-1;i++){
+    routeTotalMeters+=distanceKm(routePts[i],routePts[i+1])*1000;
+    routeCumulativeMeters.push(routeTotalMeters);
   }
-  return nearest;
 }
 
-function remainingRouteKm(fromIndex){
-  let remaining=0;
-  for(let i=Math.max(0,fromIndex);i<routePts.length-1;i++)remaining+=distanceKm(routePts[i],routePts[i+1]);
-  return remaining;
+function projectOntoRoute(position){
+  if(routePts.length<2)return null;
+  const latScale=111320;
+  const lngScale=111320*Math.cos(position.lat*Math.PI/180);
+  let best=null;
+  for(let i=0;i<routePts.length-1;i++){
+    const a=routePts[i],b=routePts[i+1];
+    const ax=(a.lng-position.lng)*lngScale,ay=(a.lat-position.lat)*latScale;
+    const bx=(b.lng-position.lng)*lngScale,by=(b.lat-position.lat)*latScale;
+    const dx=bx-ax,dy=by-ay,denom=dx*dx+dy*dy;
+    const t=denom>0?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/denom)):0;
+    const px=ax+dx*t,py=ay+dy*t;
+    const distanceMeters=Math.hypot(px,py);
+    if(!best||distanceMeters<best.distanceMeters){
+      const segmentMeters=(routeCumulativeMeters[i+1]||0)-(routeCumulativeMeters[i]||0);
+      best={
+        segmentIndex:i,
+        distanceMeters,
+        alongMeters:(routeCumulativeMeters[i]||0)+segmentMeters*t,
+        point:{lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t}
+      };
+    }
+  }
+  return best;
 }
 
-function updateLiveNavigation(){
+function formatRouteDistance(meters){
+  return meters<1000?`${Math.max(10,Math.round(meters/10)*10)} m`:`${(meters/1000).toFixed(1)} km`;
+}
+
+function updateLiveNavigation(isMoving=false,accuracy=999){
   if(!navActive||routePts.length<2)return;
-  const nearest=nearestRouteIndex(curPos);
-  if(nearest>=posIdx)posIdx=nearest;
+  const projection=projectOntoRoute(curPos);
+  if(!projection)return;
+  snappedRoutePosition=projection.point;
+  routeProgressMeters=Math.max(routeProgressMeters,projection.alongMeters);
+  posIdx=Math.max(posIdx,projection.segmentIndex);
+
+  if(isMoving&&accuracy<=MAX_DERIVED_ACCURACY_M&&projection.distanceMeters>OFF_ROUTE_THRESHOLD_M){
+    offRouteFixes++;
+    if(offRouteFixes>=OFF_ROUTE_FIXES_REQUIRED&&Date.now()-lastRerouteAt>=REROUTE_COOLDOWN_MS&&!isRerouting&&selectedDestination){
+      lastRerouteAt=Date.now();
+      offRouteFixes=0;
+      buildRouteTo(selectedDestination,{reroute:true});
+    }
+  }else if(projection.distanceMeters<=OFF_ROUTE_THRESHOLD_M){
+    offRouteFixes=0;
+  }
+
   const steps=dynamicNavSteps||NAV_STEPS;
-  const progress=posIdx/(routePts.length-1);
-  const expectedStep=Math.min(Math.floor(progress*steps.length),steps.length-1);
-  if(expectedStep>navStepIdx&&navStepIdx<steps.length-1){
+  let expectedStep=0;
+  if(dynamicNavSteps){
+    const nextIndex=dynamicNavSteps.findIndex(step=>step.routeMeters>routeProgressMeters+15);
+    expectedStep=nextIndex<0?dynamicNavSteps.length-1:nextIndex;
+  }else{
+    const progress=routeTotalMeters>0?routeProgressMeters/routeTotalMeters:0;
+    expectedStep=Math.min(Math.floor(progress*steps.length),steps.length-1);
+  }
+  if(expectedStep!==navStepIdx){
     navStepIdx=expectedStep;
     const st=steps[navStepIdx];
-    $('navDistance').textContent=st.dist;
+    const stepMeters=dynamicNavSteps?Math.max(0,st.routeMeters-routeProgressMeters):0;
+    const distanceText=dynamicNavSteps?'In '+formatRouteDistance(stepMeters):st.dist;
+    $('navDistance').textContent=distanceText;
     $('navStreetName').textContent=st.street;
     $('navManeuverIcon').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MANEUVER_SVG[st.maneuver]}</svg>`;
     $('streetName').textContent=st.street;
-    $('nextTurnText').textContent=st.dist;
+    $('nextTurnText').textContent=distanceText;
     if(st.maneuver==='arrive'){
       if(canCompleteJourney())speak('You have arrived at your destination.');
-    }else{
-      speak(st.dist+', '+st.street);
+    }else if(navStepIdx!==lastSpokenStepIdx){
+      lastSpokenStepIdx=navStepIdx;
+      speak((st.voiceInstruction||distanceText+', '+st.street));
     }
+  }else if(dynamicNavSteps&&steps[navStepIdx]){
+    const stepMeters=Math.max(0,steps[navStepIdx].routeMeters-routeProgressMeters);
+    const distanceText='In '+formatRouteDistance(stepMeters);
+    $('navDistance').textContent=distanceText;
+    $('nextTurnText').textContent=distanceText;
   }
-  const remainKm=remainingRouteKm(Math.floor(posIdx));
-  const remainMin=Math.round(remainKm/Math.max(20,liveSpeed)*60);
+  const remainingMeters=Math.max(0,routeTotalMeters-routeProgressMeters);
+  const remainKm=remainingMeters/1000;
+  const remainMin=Math.max(0,Math.round((routeDurationSeconds*(routeTotalMeters?remainingMeters/routeTotalMeters:0))/60));
   $('navEta').textContent=remainMin+' min';
   $('navRemain').textContent=remainKm.toFixed(1)+' km';
-  if(remainKm<=0.05&&canCompleteJourney()&&!window._arrived){
+  if(remainingMeters<=50&&canCompleteJourney()&&!window._arrived){
     window._arrived=true;
     speak('You have arrived. Journey complete.');
     endJourney('Journey complete');
@@ -2239,7 +2311,7 @@ function updateLiveNavigation(){
 
 function canCompleteJourney(){
   if(!recording||!journeyActive||!navActive||!selectedDestination||routePts.length<2)return false;
-  const progress=posIdx/(routePts.length-1);
+  const progress=routeTotalMeters>0?routeProgressMeters/routeTotalMeters:0;
   const destinationDistance=distanceKm(curPos,selectedDestination);
   return hasMovedDuringJourney&&durSec>=20&&distKm>=0.2&&progress>=0.97&&destinationDistance<=0.075;
 }
@@ -2288,11 +2360,14 @@ function handleGpsPosition(position){
     longitude:Number(fix.lng.toFixed(6))
   });
 
-  if(userMarker)userMarker.setLngLat([curPos.lng,curPos.lat]);
+  updateLiveNavigation(isMoving,accuracy);
+  const displayPosition=navActive&&snappedRoutePosition&&projectOntoRoute(curPos)?.distanceMeters<=MAX_DERIVED_ACCURACY_M
+    ?snappedRoutePosition:curPos;
+  if(userMarker)userMarker.setLngLat([displayPosition.lng,displayPosition.lat]);
   const arrowEl=$('userArrow');
   if(arrowEl)arrowEl.style.transform=`translate(-50%,-100%) rotate(${userHeading}deg)`;
   if(map&&map.loaded()){
-    map.easeTo({center:[curPos.lng,curPos.lat],bearing:userHeading,pitch:navActive?50:30,zoom:navActive?15:14,duration:400});
+    map.easeTo({center:[displayPosition.lng,displayPosition.lat],bearing:userHeading,pitch:navActive?55:30,zoom:navActive?16:14,duration:400});
   }
 
   const violating=isMoving&&liveSpeed>journey.limit+2;
@@ -2305,7 +2380,6 @@ function handleGpsPosition(position){
   }
   wasViolating=violating;
   if(isMoving)checkHazardProximity();
-  updateLiveNavigation();
   updateStats();
 }
 
@@ -2354,13 +2428,13 @@ function filterCities(){
       <div><div class="city-name">${c.name}</div><div class="city-region">${c.region}</div></div></button>`;
   }).join('');
 }
-function selectDestination(i){
+async function selectDestination(i){
   // Choosing a route is not motion. Always return every speed display and
   // recording control to a stationary state until Start is explicitly tapped.
   forceStationary('Route selected — tap Start when the vehicle moves');
   closeNavOverlay();
   navActive=true;navStepIdx=-1;window._arrived=false;
-  posIdx=0;distKm=0;durSec=0;
+  posIdx=0;distKm=0;durSec=0;routeProgressMeters=0;offRouteFixes=0;lastSpokenStepIdx=-1;snappedRoutePosition=null;
   const dest=CITIES[i];
   selectedDestination={lat:dest.lat,lng:dest.lng,name:dest.name};
   hasMovedDuringJourney=false;
@@ -2371,6 +2445,7 @@ function selectDestination(i){
   $('navStreetName').textContent='Route to '+dest.name;
   speak('Navigation started. Route to '+dest.name+'.');
   showToast('Calculating route to '+dest.name+'…');
+  await primeCurrentLocation();
   buildRouteTo(dest).then(()=>{
     // Don't auto-start recording — let user press Start
     $('nextTurnText').textContent='Tap Start to begin';
@@ -2390,22 +2465,47 @@ function stopNav(){
   showToast('Navigation stopped');
 }
 
-/* OSRM route fetching (real road routes) */
-async function buildRouteTo(dest){
+/* Mapbox traffic-aware road routing */
+async function buildRouteTo(dest,{reroute=false}={}){
+  if(isRerouting)return;
+  isRerouting=reroute;
   const oLng=curPos.lng.toFixed(6),oLat=curPos.lat.toFixed(6);
   const dLng=dest.lng.toFixed(6),dLat=dest.lat.toFixed(6);
-  const url=`https://router.project-osrm.org/route/v1/driving/${oLng},${oLat};${dLng},${dLat}?overview=full&geometries=geojson&steps=true`;
   try{
+    const configured=mapboxConfigStatus==='ready'||await loadMapboxConfig();
+    if(!configured||!window.mapboxgl?.accessToken)throw new Error('Mapbox token unavailable');
+    if(reroute){
+      $('navDistance').textContent='Rerouting…';
+      $('navStreetName').textContent='Finding a faster road route';
+      showToast('You are off route — recalculating');
+    }
+    const params=new URLSearchParams({
+      alternatives:'false',
+      geometries:'geojson',
+      overview:'full',
+      steps:'true',
+      banner_instructions:'true',
+      voice_instructions:'true',
+      language:'en',
+      voice_units:'metric',
+      access_token:window.mapboxgl.accessToken
+    });
+    const url=`https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${oLng},${oLat};${dLng},${dLat}?${params}`;
     const resp=await fetch(url);
-    if(!resp.ok)throw new Error('OSRM '+resp.status);
+    if(!resp.ok)throw new Error('Mapbox Directions '+resp.status);
     const data=await resp.json();
-    if(!data.routes||!data.routes.length)throw new Error('No route');
+    if(data.code!=='Ok'||!data.routes||!data.routes.length)throw new Error(data.message||'No route');
     const route=data.routes[0];
     const coords=route.geometry.coordinates.map(c=>({lat:c[1],lng:c[0]}));
     if(coords.length<2)throw new Error('Route too short');
     routePts=coords;
+    rebuildRouteMetrics();
+    routeDurationSeconds=Math.max(0,route.duration||0);
+    routeProgressMeters=0;
+    snappedRoutePosition=null;
+    offRouteFixes=0;
     updateRouteLayer();
-    if(map&&map.loaded()){
+    if(map&&map.loaded()&&!reroute){
       const bounds=[[coords[0].lng,coords[0].lat],[coords[coords.length-1].lng,coords[coords.length-1].lat]];
       coords.forEach(p=>{
         if(p.lng<bounds[0][0])bounds[0][0]=p.lng;
@@ -2415,7 +2515,7 @@ async function buildRouteTo(dest){
       });
       map.fitBounds(bounds,{padding:[60,60]});
     }
-    // Build nav steps from OSRM
+    // Build turn-by-turn steps from Mapbox maneuver, banner and voice data.
     dynamicNavSteps=[];
     if(route.legs){
       route.legs.forEach(leg=>{
@@ -2436,31 +2536,47 @@ async function buildRouteTo(dest){
               }
               else if(t==='new name'||t==='continue')mvType='straight';
               else if(t==='merge'){if(mod==='left')mvType='slight_left';else if(mod==='right')mvType='slight_right';else mvType='straight';}
-              else if(t==='roundabout'||t==='rotary')mvType='right';
+              else if(t==='roundabout'||t==='rotary')mvType=mod&&mod.includes('left')?'left':'right';
               else if(t==='fork'){if(mod==='left')mvType='slight_left';else if(mod==='right')mvType='slight_right';else mvType='straight';}
             }
-            const dist=step.distance<1000?Math.round(step.distance/10)*10+' m':(step.distance/1000).toFixed(1)+' km';
-            let street=step.name||(maneuver&&maneuver.type==='arrive'?'Arrive at destination':'Continue');
+            const dist=formatRouteDistance(step.distance||0);
+            const banner=step.banner_instructions&&step.banner_instructions[0]&&step.banner_instructions[0].primary;
+            let street=(banner&&banner.text)||step.name||(maneuver&&maneuver.instruction)||'Continue';
             if(maneuver&&maneuver.type==='arrive')street='Arrive at destination: '+dest.name;
-            dynamicNavSteps.push({dist:'In '+dist,street,maneuver:mvType});
+            const maneuverPoint=maneuver&&maneuver.location?{lng:maneuver.location[0],lat:maneuver.location[1]}:{lng:coords[coords.length-1].lng,lat:coords[coords.length-1].lat};
+            const projected=projectOntoRoute(maneuverPoint);
+            const voice=(step.voice_instructions&&step.voice_instructions[0]&&step.voice_instructions[0].announcement)||(maneuver&&maneuver.instruction);
+            dynamicNavSteps.push({
+              dist:'In '+dist,
+              street,
+              maneuver:mvType,
+              routeMeters:projected?projected.alongMeters:routeTotalMeters,
+              distanceMeters:step.distance||0,
+              durationSeconds:step.duration||0,
+              voiceInstruction:voice
+            });
           });
         }
       });
     }
     if(!dynamicNavSteps.length)dynamicNavSteps=null;
     const steps=dynamicNavSteps||NAV_STEPS;
-    navStepIdx=0;
+    navStepIdx=0;lastSpokenStepIdx=-1;
     const st=steps[0];
     $('navDistance').textContent=st.dist;
     $('navStreetName').textContent=st.street;
     $('navManeuverIcon').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MANEUVER_SVG[st.maneuver]}</svg>`;
     $('streetName').textContent=st.street;
     $('nextTurnText').textContent=st.dist;
-    speak(st.dist+', '+st.street);
-    showToast('Route to '+dest.name+' — '+(route.distance/1000).toFixed(0)+' km');
+    if(!reroute)speak(st.voiceInstruction||st.dist+', '+st.street);
+    showToast((reroute?'Route updated — ':'Route to '+dest.name+' — ')+(route.distance/1000).toFixed(1)+' km · '+Math.max(1,Math.round(route.duration/60))+' min');
   }catch(err){
-    console.warn('OSRM route failed:',err);
-    showToast('Using demo route — live routing unavailable');
+    console.warn('Mapbox route failed:',err);
+    if(reroute){
+      showToast('Could not recalculate yet — staying on current route');
+      return;
+    }
+    showToast('Using offline route preview — live routing unavailable');
     const startPt={lat:curPos.lat,lng:curPos.lng};
     const endPt={lat:dest.lat,lng:dest.lng};
     const pts=[];const segs=24;
@@ -2468,7 +2584,7 @@ async function buildRouteTo(dest){
       const t=i/segs;const offset=Math.sin(t*Math.PI)*0.02;
       pts.push({lat:startPt.lat+(endPt.lat-startPt.lat)*t+offset,lng:startPt.lng+(endPt.lng-startPt.lng)*t});
     }
-    routePts=pts;updateRouteLayer();
+    routePts=pts;rebuildRouteMetrics();routeDurationSeconds=routeTotalMeters/50000*3600;updateRouteLayer();
     if(map&&map.loaded())map.fitBounds([[pts[0].lng,pts[0].lat],[pts[pts.length-1].lng,pts[pts.length-1].lat]],{padding:[60,60]});
     dynamicNavSteps=null;navStepIdx=0;
     const st=NAV_STEPS[0];
@@ -2476,6 +2592,8 @@ async function buildRouteTo(dest){
     $('navStreetName').textContent='Route to '+dest.name;
     $('navManeuverIcon').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MANEUVER_SVG[st.maneuver]}</svg>`;
     speak('Route to '+dest.name+'. '+st.dist+', '+st.street);
+  }finally{
+    isRerouting=false;
   }
 }
 
