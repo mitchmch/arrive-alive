@@ -18,6 +18,7 @@ assert.match(edge, /SUPABASE_SERVICE_ROLE_KEY/);
 assert.match(helpers, /PBKDF2/);
 assert.match(edge, /token_hash/);
 assert.match(edge, /Administrator access required/);
+assert.match(edge, /https:\/\/cp\.arrivealive\.app/);
 for (const route of ['/api/auth/register','/api/auth/login','/api/auth/reset-pin','/api/profile','/api/sync','/api/stats','/api/users','/api/admin/sync-health']) {
   assert.ok(edge.includes(route), `Edge API route missing: ${route}`);
 }

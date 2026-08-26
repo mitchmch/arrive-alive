@@ -16,7 +16,7 @@ Supabase Edge Function secrets/runtime:
 ```text
 SUPABASE_URL=https://PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...             # server-side Edge secret only
-APP_ALLOWED_ORIGINS=https://arrive-alive-virid.vercel.app
+APP_ALLOWED_ORIGINS=https://arrive-alive-virid.vercel.app,https://cp.arrivealive.app
 APP_SESSION_TTL_DAYS=30                   # optional, clamped to 1-90
 ```
 
@@ -33,7 +33,7 @@ the source default and can still be overridden):
 flutter run --dart-define=API_BASE_URL=https://otbbyvdhqbnjvswrwzft.supabase.co/functions/v1/app-api
 ```
 
-Web direct authentication uses the public Edge Function URL in the `arrive-alive-api-url` meta tag in `index.html`. The production Vercel hostname is the Edge Function's safe default CORS origin; configure `APP_ALLOWED_ORIGINS` when adding more production hostnames. The URL is an endpoint, not a secret. Do not place `SUPABASE_SERVICE_ROLE_KEY`, an anon key, or an administrator credential in web/Flutter code.
+Web direct authentication uses the public Edge Function URL in the `arrive-alive-api-url` meta tag in `index.html`. The production Vercel hostname and planned `cp.arrivealive.app` control-panel hostname are safe default CORS origins; configure `APP_ALLOWED_ORIGINS` when adding more production hostnames. The URL is an endpoint, not a secret. Do not place `SUPABASE_SERVICE_ROLE_KEY`, an anon key, or an administrator credential in web/Flutter code.
 
 ## Setup sequence (operator-run, not performed here)
 

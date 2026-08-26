@@ -3,7 +3,10 @@ import {ApiError, CONTRACT_VERSION, camel, deriveSecret, normalizePhone, optiona
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const DEFAULT_ALLOWED_ORIGINS = ['https://arrive-alive-virid.vercel.app'];
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://arrive-alive-virid.vercel.app',
+  'https://cp.arrivealive.app',
+];
 const ALLOWED_ORIGINS = (Deno.env.get('APP_ALLOWED_ORIGINS') ?? DEFAULT_ALLOWED_ORIGINS.join(','))
   .split(',')
   .map((v) => v.trim())
