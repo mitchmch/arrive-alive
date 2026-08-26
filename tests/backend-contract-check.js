@@ -47,7 +47,7 @@ assert.match(edge, /robustWeightedSpeed/);
 assert.match(edge, /OPENAI_API_KEY/);
 assert.match(edge, /Never decide, revise, recommend, or infer trusted\/avoid status/);
 assert.match(edge, /SAFETY_SCHEDULER_SECRET/);
-for (const route of ['/api/journeys/complete-safety','/api/speed-board','/api/speed-reports','/api/notifications','/api/admin/safety-rollups','/api/safety/rollups/run']) {
+for (const route of ['/api/journeys/complete-safety','/api/speed-board','/api/speed-reports','/api/notifications','/api/admin/safety-rollups','/api/safety/rollups/run','/api/admin/safety-summary-check']) {
   assert.ok(edge.includes(route), `Safety API route missing: ${route}`);
 }
 console.log('Backend contract checks passed.');

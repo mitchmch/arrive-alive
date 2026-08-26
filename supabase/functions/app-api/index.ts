@@ -307,6 +307,60 @@ async function handle(req:Request):Promise<Response> {
     const salt=randomToken(16); ensure(null,(await db.from('users').update({pin_salt:salt,pin_hash:await deriveSecret(newPin,salt,data.hash_iterations)}).eq('id',data.id)).error); await db.from('app_sessions').update({revoked_at:new Date().toISOString()}).eq('user_id',data.id); await audit({user:data as AppUser,sessionId:''},'reset_pin','user',data.id); return json(req,{ok:true});
   }
   const identity=await authenticate(req,true) as Identity;
+  if(path==='/api/admin/safety-summary-check'&&method==='POST'){
+    admin(identity);
+    const fallback='OpenAI summary verification did not run. No safety evidence was created or changed.';
+    const summary=await writeOptionalSummary({
+      period:'verification',
+      status:'insufficient_evidence',
+      confidence:0,
+      journeyCount:0,
+      distinctUserCount:0,
+      acceptedSampleCount:0,
+      totalDurationSeconds:0,
+      violationJourneyCount:0,
+      violationEpisodeCount:0,
+      independentReporterCount:0,
+      outlierCount:0,
+      weightedSpeedKph:null,
+      reasons:['Verification request only','No journey or agency data supplied'],
+    },fallback);
+    return json(req,{
+      configured:Boolean(OPENAI_API_KEY),
+      model:OPENAI_SUMMARY_MODEL,
+      status:summary.status,
+      summary:summary.text,
+      verificationOnly:true,
+      persisted:false,
+    });
+  }
+  if(path==='/api/admin/safety-summary-check'&&method==='POST'){
+    admin(identity);
+    const fallback='OpenAI summary verification did not run. No safety evidence was created or changed.';
+    const summary=await writeOptionalSummary({
+      period:'verification',
+      status:'insufficient_evidence',
+      confidence:0,
+      journeyCount:0,
+      distinctUserCount:0,
+      acceptedSampleCount:0,
+      totalDurationSeconds:0,
+      violationJourneyCount:0,
+      violationEpisodeCount:0,
+      independentReporterCount:0,
+      outlierCount:0,
+      weightedSpeedKph:null,
+      reasons:['Verification request only','No journey or agency data supplied'],
+    },fallback);
+    return json(req,{
+      configured:Boolean(OPENAI_API_KEY),
+      model:OPENAI_SUMMARY_MODEL,
+      status:summary.status,
+      summary:summary.text,
+      verificationOnly:true,
+      persisted:false,
+    });
+  }
   if(path==='/api/public-reports'&&method==='POST'){
     admin(identity);const body=await bodyJson(req),safe=publicReportSnapshot(body.snapshot),slug=randomToken(18).toLowerCase();
     const {data,error}=await db.from('public_agency_reports').insert({slug,agency_stable_id:(safe.agency as any).id,snapshot:safe,created_by:identity.user.id}).select('slug,created_at').single();
