@@ -1479,7 +1479,8 @@ function updateThemeControls(){
 function updateMapNotice(){
   if(!$('mapNotice'))return;
   const period=theme==='light'?'day':'night';
-  $('mapNotice').textContent=`CARTO ${period} map`;
+  const provider=mapFallbackStage===1?'Backup map':mapFallbackStage===2?'Limited map':'OpenStreetMap';
+  $('mapNotice').textContent=`${provider} · ${period} mode`;
 }
 function applyTheme(nextTheme,{updateMap=true}={}){
   if(nextTheme!=='light'&&nextTheme!=='dark')return;
@@ -1489,7 +1490,10 @@ function applyTheme(nextTheme,{updateMap=true}={}){
   updateThemeControls();
   updateMapNotice();
   if(changed&&updateMap&&map){
-    map.setStyle(getMapStyle(theme));
+    mapResourceErrors=0;
+    mapFallbackSwitching=false;
+    map.setStyle(getActiveMapStyle(theme));
+    scheduleMapStartupFallback();
     restoreMapOperationalLayersWhenReady();
   }
 }
@@ -1498,9 +1502,53 @@ function toggleTheme(){
   applyTheme(theme==='light'?'dark':'light');
 }
 function getMapStyle(mapTheme=theme){
+  const dark=mapTheme==='dark';
+  return {
+    version:8,
+    sources:{
+      openstreetmap:{
+        type:'raster',
+        tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize:256,
+        attribution:'© OpenStreetMap contributors',
+        maxzoom:19
+      }
+    },
+    layers:[{
+      id:'openstreetmap-base',
+      type:'raster',
+      source:'openstreetmap',
+      minzoom:0,
+      maxzoom:19,
+      paint:dark?{
+        'raster-brightness-min':0.08,
+        'raster-brightness-max':0.52,
+        'raster-contrast':0.18,
+        'raster-saturation':-0.35
+      }:{}
+    }]
+  };
+}
+function getBackupMapStyle(mapTheme=theme){
   return mapTheme==='light'
     ?'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
     :'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+}
+function getLimitedMapStyle(mapTheme=theme){
+  return {
+    version:8,
+    sources:{},
+    layers:[{
+      id:'limited-map-background',
+      type:'background',
+      paint:{'background-color':mapTheme==='dark'?'#172033':'#e7edf3'}
+    }]
+  };
+}
+function getActiveMapStyle(mapTheme=theme){
+  if(mapFallbackStage===1)return getBackupMapStyle(mapTheme);
+  if(mapFallbackStage===2)return getLimitedMapStyle(mapTheme);
+  return getMapStyle(mapTheme);
 }
 function syncAutomaticTheme(){
   if(themeMode==='auto')applyTheme(getDayNightTheme());
@@ -1652,6 +1700,7 @@ function finishWizard(){startJourney();}
    ============================================================ */
 let map=null,userMarker=null,hazardMarkers=new Map(),routeSource=null,routeLayer=null,reportPinMarker=null;
 let mapStartupTimer=null;
+let mapFallbackStage=0,mapFallbackSwitching=false,mapResourceErrors=0;
 let posIdx=0,routePts=[],routeTotalKm=0;
 let curPos={lat:3.8480,lng:11.5021};
 let liveSpeed=0,recordingTimer=null,geoWatchId=null,lastGeoFix=null,recordingStartedAt=0;
@@ -1794,6 +1843,9 @@ function initMap(){
     requestMapResize();
     return;
   }
+  mapFallbackStage=0;
+  mapFallbackSwitching=false;
+  mapResourceErrors=0;
   setMapState('loading');
   if(typeof maplibregl==='undefined'){
     setMapState('error','Map could not start','Reload the app to restore the bundled map engine.');
@@ -1819,21 +1871,25 @@ function initMap(){
     return;
   }
 
-  clearTimeout(mapStartupTimer);
-  mapStartupTimer=setTimeout(()=>{
-    if(map&&!map.loaded())setMapState('error','Map is taking too long','Check your connection, then tap Retry.');
-  },12000);
+  scheduleMapStartupFallback();
 
   map.on('load',()=>{
     clearTimeout(mapStartupTimer);
+    mapFallbackSwitching=false;
     routePts=ROUTE.map(p=>({lat:p[0],lng:p[1]}));
     restoreMapOperationalLayersWhenReady();
     setMapState('ready');
+    updateMapNotice();
     requestMapResize();
   });
   map.on('style.load',()=>{
+    clearTimeout(mapStartupTimer);
+    mapFallbackSwitching=false;
+    mapResourceErrors=0;
     restoreMapOperationalLayersWhenReady();
+    setTimeout(restoreMapOperationalLayersWhenReady,500);
     setMapState('ready');
+    updateMapNotice();
     requestMapResize();
   });
 
@@ -1860,7 +1916,8 @@ function initMap(){
   // Handle map errors
   map.on('error',e=>{
     console.warn('Map error:',e);
-    if(!map.loaded())setMapState('error','Map unavailable','Check your connection, then retry.');
+    mapResourceErrors++;
+    if(!map.isStyleLoaded()||mapResourceErrors>=3)activateMapFallback('resource error');
   });
 }
 
@@ -1870,7 +1927,82 @@ function setMapState(state,title,copy){
   el.classList.toggle('hidden',state==='ready');
   el.classList.toggle('error',state==='error');
   $('mapStateTitle').textContent=title||(state==='loading'?'Loading map':'Map unavailable');
-  $('mapStateCopy').textContent=copy||(state==='loading'?`Preparing the ${theme==='light'?'day':'night'} map for your journey.`:'Check your connection, then retry.');
+  $('mapStateCopy').textContent=copy||(state==='loading'?`Preparing the ${theme==='light'?'day':'night'} map for your journey.`:'Tap Retry to restart the map.');
+}
+
+function scheduleMapStartupFallback(){
+  clearTimeout(mapStartupTimer);
+  mapStartupTimer=setTimeout(()=>{
+    if(map&&(!map.isStyleLoaded()||!$('mapState').classList.contains('hidden'))){
+      mapFallbackSwitching=false;
+      activateMapFallback('startup timeout');
+    }
+  },8000);
+}
+
+function settleMapStyleWhenReady(expectedStage,attempt=0){
+  if(!map||mapFallbackStage!==expectedStage)return;
+  if(map.isStyleLoaded()){
+    clearTimeout(mapStartupTimer);
+    mapFallbackSwitching=false;
+    mapResourceErrors=0;
+    restoreMapOperationalLayersWhenReady();
+    setTimeout(restoreMapOperationalLayersWhenReady,500);
+    setMapState('ready');
+    updateMapNotice();
+    requestMapResize();
+    return;
+  }
+  if(attempt>=32){
+    mapFallbackSwitching=false;
+    activateMapFallback('map source timeout');
+    return;
+  }
+  mapStartupTimer=setTimeout(()=>settleMapStyleWhenReady(expectedStage,attempt+1),250);
+}
+
+function activateMapFallback(reason='map unavailable'){
+  if(!map||mapFallbackSwitching)return;
+  mapFallbackSwitching=true;
+  clearTimeout(mapStartupTimer);
+  console.warn(`Map fallback stage ${mapFallbackStage+1}: ${reason}`);
+
+  if(mapFallbackStage===0){
+    mapFallbackStage=1;
+    mapResourceErrors=0;
+    setMapState('loading','Loading backup map','Switching map sources automatically.');
+    updateMapNotice();
+    try{
+      map.setStyle(getBackupMapStyle(theme));
+      settleMapStyleWhenReady(mapFallbackStage);
+    }catch(error){
+      mapFallbackSwitching=false;
+      activateMapFallback('backup map could not start');
+    }
+    return;
+  }
+
+  if(mapFallbackStage===1){
+    mapFallbackStage=2;
+    mapResourceErrors=0;
+    setMapState('loading','Opening limited map','Road tiles are unavailable. Journey recording and route guidance remain available.');
+    updateMapNotice();
+    try{
+      map.setStyle(getLimitedMapStyle(theme));
+      settleMapStyleWhenReady(mapFallbackStage);
+    }catch(error){
+      console.warn('Limited map could not start:',error);
+      mapFallbackSwitching=false;
+      setMapState('error','Map could not start','Tap Retry to restart the map.');
+    }
+    return;
+  }
+
+  mapFallbackSwitching=false;
+  restoreMapOperationalLayersWhenReady();
+  setMapState('ready');
+  updateMapNotice();
+  requestMapResize();
 }
 
 function requestMapResize(){
@@ -1884,6 +2016,9 @@ function requestMapResize(){
 
 function retryMap(){
   clearTimeout(mapStartupTimer);
+  mapFallbackStage=0;
+  mapFallbackSwitching=false;
+  mapResourceErrors=0;
   if(map){
     map.remove();
     map=null;
