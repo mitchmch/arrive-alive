@@ -121,8 +121,13 @@ function periodBounds(period:'daily'|'weekly'|'monthly', now=new Date()){
   return {start:date,end};
 }
 
-async function computeAgencyRollups(periods:Array<'daily'|'weekly'|'monthly'>=['daily','weekly','monthly']){
-  const {data:agencies,error:agencyError}=await db.from('agencies').select('id,name').is('deleted_at',null);
+async function computeAgencyRollups(
+  periods:Array<'daily'|'weekly'|'monthly'>=['daily','weekly','monthly'],
+  agencyIds:number[]=[],
+){
+  let agencyQuery=db.from('agencies').select('id,name').is('deleted_at',null);
+  if(agencyIds.length)agencyQuery=agencyQuery.in('id',agencyIds);
+  const {data:agencies,error:agencyError}=await agencyQuery;
   ensure(agencies,agencyError);
   const results:any[]=[];
   for(const agency of agencies??[])for(const period of periods){
@@ -151,7 +156,9 @@ async function computeAgencyRollups(periods:Array<'daily'|'weekly'|'monthly'>=['
       : null;
     const decision=decideAgencyRollup({journeyCount,distinctUserCount,totalDurationSeconds,violationJourneyCount});
     const fallback=`${agency.name}: ${decision.status.replaceAll('_',' ')} for this ${period} period. ${decision.reasons.join('. ')}.`;
-    const summary=await writeOptionalSummary({period,periodStart:bounds.start.toISOString().slice(0,10),periodEnd:bounds.end.toISOString().slice(0,10),status:decision.status,confidence:decision.confidence,journeyCount,distinctUserCount,acceptedSampleCount,totalDurationSeconds,violationJourneyCount,violationEpisodeCount,independentReporterCount,outlierCount,weightedSpeedKph,reasons:decision.reasons,thresholds:ROLLUP_THRESHOLDS},fallback);
+    const summary=decision.status==='insufficient_evidence'
+      ?{text:fallback,status:'not_required'}
+      :await writeOptionalSummary({period,periodStart:bounds.start.toISOString().slice(0,10),periodEnd:bounds.end.toISOString().slice(0,10),status:decision.status,confidence:decision.confidence,journeyCount,distinctUserCount,acceptedSampleCount,totalDurationSeconds,violationJourneyCount,violationEpisodeCount,independentReporterCount,outlierCount,weightedSpeedKph,reasons:decision.reasons,thresholds:ROLLUP_THRESHOLDS},fallback);
     const row={agency_id:agency.id,period,period_start:bounds.start.toISOString().slice(0,10),period_end:bounds.end.toISOString().slice(0,10),status:decision.status,confidence:decision.confidence,journey_count:journeyCount,distinct_user_count:distinctUserCount,accepted_sample_count:acceptedSampleCount,total_duration_seconds:totalDurationSeconds,violation_journey_count:violationJourneyCount,violation_episode_count:violationEpisodeCount,independent_reporter_count:independentReporterCount,outlier_count:outlierCount,weighted_speed_kph:weightedSpeedKph,reasons:decision.reasons,thresholds:ROLLUP_THRESHOLDS,deterministic_summary:fallback,ai_summary:summary.text,ai_status:summary.status,computed_at:new Date().toISOString()};
     const {data:previous}=await db.from('agency_safety_rollups').select('status').eq('agency_id',agency.id).eq('period',period).eq('period_start',row.period_start).maybeSingle();
     const write=await db.from('agency_safety_rollups').upsert(row,{onConflict:'agency_id,period,period_start'}).select('*').single();
@@ -324,7 +331,8 @@ async function handle(req:Request):Promise<Response> {
       const summary=await writeOptionalSummary({...analysis.assessment,period:'journey'},String(analysis.assessment.deterministicSummary));
       await db.from('journey_safety_assessments').update({ai_summary:summary.text,ai_status:summary.status}).eq('journey_id',journey.id);
       await db.from('speed_board_entries').update({summary:summary.text}).eq('journey_id',journey.id);
-      return {status:200,body:{assessment:{...camel(assessment),aiSummary:summary.text,aiStatus:summary.status},episodes:analysis.episodes,published:true}};
+      const rollups=journey.agency_id?await computeAgencyRollups(['daily','weekly','monthly'],[Number(journey.agency_id)]):[];
+      return {status:200,body:{assessment:{...camel(assessment),aiSummary:summary.text,aiStatus:summary.status},episodes:analysis.episodes,rollups:rollups.map(camel),published:true}};
     });
     return json(req,result.body,result.status);
   }
