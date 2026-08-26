@@ -4,6 +4,8 @@ import '../models/violation.dart';
 import '../models/incident.dart';
 import '../models/agency.dart';
 import '../services/api_service.dart';
+import '../services/admin_report_service.dart';
+import '../services/speed_limit_service.dart';
 import '../core/access_policy.dart';
 import 'auth_controller.dart';
 
@@ -50,6 +52,16 @@ final adminUsersProvider =
       .map((user) => Map<String, dynamic>.from(user as Map))
       .toList();
 });
+
+final speedLimitsAdminProvider =
+    FutureProvider<Map<String, double>>((ref) async {
+  _requireAdmin(ref);
+  return SpeedLimitService.fetchSpeedLimits();
+});
+
+final adminReportServiceProvider = Provider<AdminReportService>(
+  (ref) => const ClipboardAdminReportService(),
+);
 
 Future<void> validateViolation(int id) async {
   await ApiService.patch('/api/violations/$id/validate', {});

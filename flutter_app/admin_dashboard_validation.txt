@@ -1,0 +1,29 @@
+Flutter administrator dashboard validation
+Date: 2026-08-26
+
+Implemented
+- Responsive NavigationRail at widths >= 900 px, extended at >= 1180 px.
+- Responsive Drawer navigation on phones.
+- Overview, Users, Reports, Agencies / Speed Board, Vehicles, Speed limits,
+  and Sync Health sections.
+- Six quick metrics backed by statsProvider data.
+- Car, bus, lorry, and motorbike fleet summaries.
+- Agency drill-down with vehicle breakdown, journeys, violations, safety
+  score, trusted status, Share report, and Export PDF actions.
+- AdminReportService boundary: clipboard sharing works without new packages;
+  native PDF package/platform setup is documented in README_FLUTTER_SETUP.md.
+- Existing AccessPolicy guard and admin-provider authorization remain intact.
+- Refresh invalidates all administrator data, speed-limit, and sync providers.
+
+Validation
+- dart format lib test: passed (66 files checked, 0 changed on final run).
+- flutter analyze: passed with no issues.
+- flutter test: passed, 44 tests.
+- flutter test test/admin_workspace_test.dart: passed, 5 tests.
+- git diff --check -- flutter_app: passed.
+
+Scope
+- Changes are confined to flutter_app.
+- No deployment was performed.
+- Existing parent web-app changes visible in the shared repository were not
+  modified as part of this task.

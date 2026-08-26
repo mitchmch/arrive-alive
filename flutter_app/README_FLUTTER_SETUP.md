@@ -28,6 +28,29 @@ Road safety app for Cameroon. Monitor vehicle speeds in real-time, report violat
 - connectivity_plus (online/offline detection)
 - flutter_tts (voice guidance)
 
+## Administrator report export
+
+The administrator workspace keeps report delivery behind
+`AdminReportService`. The default implementation uses Flutter's built-in
+clipboard support for **Share report**, so it has no additional platform
+dependency. **Export PDF** intentionally returns a clear unavailable state
+until a product-specific PDF renderer is configured.
+
+To enable native PDF export:
+
+1. Add compatible `pdf`, `printing`, and (if direct sharing is required)
+   `share_plus` versions to `pubspec.yaml`.
+2. Implement `AdminReportService.exportAgencyPdf` by rendering
+   `Agency.reportSummary` and its vehicle breakdown to bytes, then call
+   `Printing.sharePdf`.
+3. Override `adminReportServiceProvider` with that implementation at the app
+   composition root.
+4. Follow the packages' current Android `minSdk`, iOS deployment target,
+   file-provider, and share-sheet setup, then test both physical platforms.
+
+Keeping the plugin boundary outside the screen lets widget tests and platforms
+without a native share sheet use the administrator workspace safely.
+
 ## Setup
 
 ### 1. Flutter Project

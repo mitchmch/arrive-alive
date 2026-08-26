@@ -6,6 +6,7 @@ class Agency {
   final double safetyScore;
   final int violationCount;
   final int totalJourneys;
+  final Map<String, int> vehicleBreakdown;
 
   Agency({
     required this.id,
@@ -15,7 +16,23 @@ class Agency {
     this.safetyScore = 100,
     this.violationCount = 0,
     this.totalJourneys = 0,
+    this.vehicleBreakdown = const {},
   });
+
+  bool get isTrusted => safetyScore >= 100;
+
+  String get reportSummary {
+    const order = ['car', 'bus', 'lorry', 'motorbike'];
+    final vehicles = order
+        .map((type) => '${_vehicleLabel(type)}: ${vehicleBreakdown[type] ?? 0}')
+        .join(', ');
+    return '$name agency safety report\n'
+        'Status: ${isTrusted ? 'Trusted' : 'Under review'}\n'
+        'Safety score: ${safetyScore.toStringAsFixed(0)}%\n'
+        'Journeys: $totalJourneys\n'
+        'Violations: $violationCount\n'
+        'Vehicles: $vehicles';
+  }
 
   factory Agency.fromJson(Map<String, dynamic> json) {
     final idValue = json['id'];
@@ -26,6 +43,12 @@ class Agency {
         json['violations'] ??
         0;
     final journeys = json['totalJourneys'] ?? json['total_journeys'] ?? 0;
+    final breakdown = _vehicleBreakdown(
+      json['vehicleBreakdown'] ??
+          json['vehicle_breakdown'] ??
+          json['vehiclesByType'] ??
+          json['vehicles_by_type'],
+    );
     return Agency(
       id: idValue is num ? idValue.toInt() : int.tryParse('$idValue') ?? 0,
       name: json['name'] ?? '',
@@ -38,6 +61,32 @@ class Agency {
           : int.tryParse('$violations') ?? 0,
       totalJourneys:
           journeys is num ? journeys.toInt() : int.tryParse('$journeys') ?? 0,
+      vehicleBreakdown: breakdown,
     );
+  }
+
+  static Map<String, int> _vehicleBreakdown(dynamic value) {
+    if (value is! Map) return const {};
+    final result = <String, int>{};
+    for (final entry in value.entries) {
+      final key = _normalizeVehicleType(entry.key.toString());
+      final count = entry.value;
+      result[key] = count is num ? count.toInt() : int.tryParse('$count') ?? 0;
+    }
+    return result;
+  }
+
+  static String _normalizeVehicleType(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'bike' || normalized == 'motorcycle') {
+      return 'motorbike';
+    }
+    return normalized;
+  }
+
+  static String _vehicleLabel(String type) {
+    return type == 'motorbike'
+        ? 'Motorbikes'
+        : '${type[0].toUpperCase()}${type.substring(1)}s';
   }
 }
