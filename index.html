@@ -312,7 +312,7 @@ ul{list-style:none}
 .wiz-skip{background:transparent;color:var(--aa-text-muted);font-weight:500;font-size:14px;text-decoration:underline}
 
 /* ===== JOURNEY / MAP (Modern Waze-inspired) ===== */
-#screen-wizard,#screen-profile,#screen-score,#screen-report,#screen-admin{background:var(--aa-bg);color:var(--aa-text)}
+#screen-wizard,#screen-profile,#screen-score,#screen-report{background:var(--aa-bg);color:var(--aa-text)}
 #screen-journey{background:var(--aa-map-bg)}
 #map{position:absolute;inset:0;z-index:1;width:100%;height:100%;min-width:1px;min-height:1px;background:var(--aa-map-bg)}
 .maplibregl-canvas,.mapboxgl-canvas{outline:none}
@@ -607,32 +607,106 @@ ul{list-style:none}
 .rank-score span{display:block;font-size:11px;color:var(--aa-text-muted)}
 .trusted-mark{display:inline-flex;align-items:center;gap:4px;color:var(--aa-success)!important;font-weight:800}
 
-/* ===== ADMIN ===== */
-.admin-body{padding:16px 16px 40px}
-.sync-banner{display:flex;align-items:flex-start;gap:10px;padding:12px;margin-bottom:14px;border:1px solid var(--aa-border);border-radius:12px;background:var(--aa-card)}
-.sync-dot{width:10px;height:10px;margin-top:5px;border-radius:50%;background:var(--aa-warning);box-shadow:0 0 0 4px color-mix(in srgb,var(--aa-warning) 14%,transparent)}
-.sync-dot.synced{background:var(--aa-success)}
-.sync-copy{min-width:0;flex:1}
-.sync-copy strong{display:block;font-size:14px}
-.sync-copy span{display:block;color:var(--aa-text-muted);font-size:12px;line-height:1.4}
-.admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.admin-metric{padding:12px;border:1px solid var(--aa-border);border-radius:12px;background:var(--aa-card)}
-.admin-metric span{display:block;color:var(--aa-text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-.admin-metric strong{display:block;margin-top:3px;font-size:21px}
-.admin-section{margin-top:18px;padding:14px;border:1px solid var(--aa-border);border-radius:14px;background:var(--aa-card)}
-.admin-section h2{font-size:16px}
-.admin-section-copy{margin:3px 0 12px;color:var(--aa-text-muted);font-size:12px;line-height:1.4}
-.admin-list{display:flex;flex-direction:column;gap:8px}
-.admin-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px;border-radius:9px;background:var(--aa-surface);font-size:12px}
-.admin-row-copy{min-width:0}
-.admin-row-copy strong,.admin-row-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.admin-row-copy span{color:var(--aa-text-muted)}
-.admin-control{min-height:36px;padding:0 10px;border:1px solid var(--aa-border);border-radius:8px;background:var(--aa-card);font-size:12px;font-weight:700}
-.admin-form{display:grid;grid-template-columns:minmax(0,1fr) 84px auto;gap:7px}
-.admin-form input,.admin-form select{min-width:0;height:40px;padding:0 9px;border:1px solid var(--aa-border);border-radius:8px;background:var(--aa-surface)}
-.admin-form button{min-height:40px;padding:0 10px;border-radius:8px;background:var(--aa-amber);color:#fff;font-size:12px;font-weight:800}
-.admin-link{color:var(--aa-amber);font-size:13px;font-weight:800}
-@media(max-width:360px){.admin-form{grid-template-columns:1fr}.history-card-meta{grid-template-columns:1fr}}
+/* ===== ADMIN — light-only control centre ===== */
+#screen-admin{
+  --aa-bg:#f6f8fc;--aa-surface:#f8faff;--aa-card:#fff;--aa-text:#17213a;
+  --aa-text-muted:#63708a;--aa-border:#dbe2f0;--aa-divider:#e8edf6;--aa-amber:#4361ee;
+  background:var(--aa-bg);color:var(--aa-text);animation:none;
+}
+.admin-shell{display:grid;grid-template-columns:240px minmax(0,1fr);height:100%;min-height:0}
+.admin-sidebar{display:flex;flex-direction:column;min-height:0;padding:20px 14px 16px;background:#fff;border-right:1px solid var(--aa-border)}
+.admin-brand{display:flex;align-items:center;gap:10px;padding:0 8px 18px}
+.admin-brand-mark{width:34px;height:34px;flex:0 0 auto;color:#4361ee}
+.admin-brand strong{display:block;font-size:15px;line-height:1.1}.admin-brand span{display:block;margin-top:3px;color:var(--aa-text-muted);font-size:11px}
+.admin-identity{padding:12px;margin-bottom:14px;border:1px solid var(--aa-border);border-radius:10px;background:var(--aa-surface)}
+.admin-identity strong,.admin-identity span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-identity strong{font-size:13px}.admin-identity span{margin-top:2px;color:var(--aa-text-muted);font-size:11px}
+.admin-nav{display:flex;flex-direction:column;gap:2px}
+.admin-nav-button{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 10px;border-radius:8px;color:#53617c;text-align:left;font-size:13px;font-weight:650}
+.admin-nav-button svg{width:18px;height:18px;flex:0 0 auto}
+.admin-nav-button:hover,.admin-nav-button.active{background:#eef2ff;color:#3147c7}
+.admin-nav-foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--aa-divider)}
+.admin-nav-button.danger{color:#b4233c}
+.admin-workspace{display:flex;flex-direction:column;min-width:0;min-height:0}
+.admin-header{height:72px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 28px;background:#fff;border-bottom:1px solid var(--aa-border)}
+.admin-header h1{font-size:22px;line-height:1.15}.admin-header p{margin-top:3px;color:var(--aa-text-muted);font-size:12px}
+.admin-header-actions{display:flex;align-items:center;gap:8px}
+.admin-button{min-height:44px;padding:0 14px;border:1px solid var(--aa-border);border-radius:8px;background:#fff;color:var(--aa-text);font-size:13px;font-weight:750}
+.admin-button:hover{border-color:#aab8d6;background:var(--aa-surface)}
+.admin-button.primary{border-color:#4361ee;background:#4361ee;color:#fff}.admin-button.primary:hover{background:#3147c7}
+.admin-button svg{width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px}
+.admin-mobile-sections{display:none}
+.admin-main{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:24px 28px 48px}
+.admin-content{width:min(100%,1240px);margin:0 auto}
+.sync-banner{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:18px;border:1px solid var(--aa-border);border-radius:10px;background:#fff}
+.sync-dot{width:9px;height:9px;flex:0 0 auto;margin-top:5px;border-radius:50%;background:#d66b27;box-shadow:0 0 0 3px #fff0e5}
+.sync-dot.synced{background:#2e7d32;box-shadow:0 0 0 3px #e7f4e8}
+.sync-copy{min-width:0;flex:1}.sync-copy strong{display:block;font-size:13px}.sync-copy span{display:block;color:var(--aa-text-muted);font-size:12px;line-height:1.4}
+.admin-section{scroll-margin-top:18px;margin:0 0 24px;padding:20px;border:1px solid var(--aa-border);border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(19,33,60,.04)}
+.admin-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.admin-section h2{font-size:17px}.admin-section-copy{margin-top:3px;color:var(--aa-text-muted);font-size:12px;line-height:1.4}
+.admin-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.admin-metric{min-width:0;padding:14px;border:1px solid var(--aa-border);border-radius:10px;background:#fff}
+.admin-metric span{display:block;color:var(--aa-text-muted);font-size:11px;font-weight:650}
+.admin-metric strong{display:block;margin-top:6px;font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
+.admin-metric small{display:block;margin-top:7px;color:var(--aa-text-muted);font-size:11px}
+.admin-list{display:flex;flex-direction:column;gap:7px}
+.admin-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:9px 11px;border:1px solid var(--aa-divider);border-radius:8px;background:var(--aa-surface);font-size:12px}
+.admin-row-copy{min-width:0}.admin-row-copy strong,.admin-row-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-row-copy span{margin-top:2px;color:var(--aa-text-muted)}
+.admin-control{min-height:40px;padding:0 11px;border:1px solid var(--aa-border);border-radius:7px;background:#fff;font-size:12px;font-weight:700}
+.admin-form{display:grid;grid-template-columns:minmax(180px,1fr) 110px auto;gap:8px;margin-bottom:12px}
+.admin-form input,.admin-form select{min-width:0;height:44px;padding:0 11px;border:1px solid var(--aa-border);border-radius:8px;background:#fff}
+.admin-form button{min-height:44px;padding:0 14px;border-radius:8px;background:#4361ee;color:#fff;font-size:12px;font-weight:800}
+.admin-link{min-height:44px;color:#3147c7;font-size:13px;font-weight:800}
+.vehicle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.vehicle-panel{min-width:0;padding:16px;border:1px solid var(--aa-border);border-radius:10px;background:var(--aa-surface)}
+.vehicle-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.vehicle-panel-head h3{font-size:15px;text-transform:capitalize}.vehicle-panel-head span{color:var(--aa-text-muted);font-size:11px}
+.vehicle-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px}
+.vehicle-stat{padding:8px;border-radius:7px;background:#fff}.vehicle-stat span{display:block;color:var(--aa-text-muted);font-size:10px}.vehicle-stat strong{display:block;margin-top:2px;font-size:13px;font-variant-numeric:tabular-nums}
+.record-table-wrap{overflow-x:auto;overscroll-behavior:contain;border:1px solid var(--aa-divider);border-radius:8px;background:#fff}
+.record-table{width:100%;min-width:520px;border-collapse:collapse;font-size:12px}.record-table th,.record-table td{padding:10px 12px;border-bottom:1px solid var(--aa-divider);text-align:left;white-space:nowrap}
+.record-table th{color:var(--aa-text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em}.record-table tr:last-child td{border-bottom:0}
+.agency-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px}
+.agency-picker{display:flex;flex-direction:column;gap:5px}
+.agency-picker button{min-height:44px;padding:8px 10px;border-radius:8px;text-align:left;font-size:12px;font-weight:700}
+.agency-picker button.active{background:#eef2ff;color:#3147c7}.agency-picker span{display:block;margin-top:2px;color:var(--aa-text-muted);font-size:10px;font-weight:500}
+.agency-report{min-width:0}.agency-report-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.agency-report-head h3{font-size:18px}.agency-report-head p{margin-top:3px;color:var(--aa-text-muted);font-size:12px}
+.agency-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
+.agency-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:14px}
+.agency-metric{padding:10px;border:1px solid var(--aa-divider);border-radius:8px;background:var(--aa-surface)}
+.agency-metric span{display:block;color:var(--aa-text-muted);font-size:10px}.agency-metric strong{display:block;margin-top:3px;font-size:17px;font-variant-numeric:tabular-nums}
+.trusted-status{color:#2e7d32!important}.share-status{min-height:20px;margin-top:8px;color:var(--aa-text-muted);font-size:12px}
+.empty-state.compact{padding:14px;background:#fff}
+
+/* Public report uses the same restrained light report language. */
+#screen-public-report{background:#f6f8fc;color:#17213a;overflow-y:auto;overscroll-behavior:contain}
+.public-report-shell{width:min(100%,960px);margin:0 auto;padding:28px 20px 56px}
+.public-report-brand{display:flex;align-items:center;gap:10px;margin-bottom:28px;color:#3147c7;font-weight:800}
+.public-report-brand svg{width:32px;height:32px}.public-report-card{padding:24px;border:1px solid #dbe2f0;border-radius:12px;background:#fff}
+.public-report-card h1{font-size:24px}.public-report-meta{margin:6px 0 20px;color:#63708a;font-size:12px}
+.public-report-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+
+@media(min-width:900px){
+  body.admin-active{align-items:stretch;justify-content:stretch;background:#f6f8fc}
+  body.admin-active #device{width:100vw;height:100dvh;border-radius:0;box-shadow:none}
+}
+@media(max-width:899px){
+  .admin-shell{display:flex;flex-direction:column}.admin-sidebar{display:none}
+  .admin-header{height:auto;min-height:68px;padding:12px 16px}.admin-header h1{font-size:19px}.admin-header p{display:none}
+  .admin-header-actions .admin-button:not(.primary){display:none}
+  .admin-mobile-sections{display:flex;flex:0 0 auto;gap:6px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--aa-border);background:#fff;scrollbar-width:none}
+  .admin-mobile-sections::-webkit-scrollbar{display:none}.admin-mobile-sections button{flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:8px;color:var(--aa-text-muted);font-size:12px;font-weight:700}
+  .admin-mobile-sections button.active{background:#eef2ff;color:#3147c7}
+  .admin-main{padding:16px 12px 36px}.admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-section{padding:15px;margin-bottom:16px}.vehicle-grid{grid-template-columns:1fr}
+  .agency-layout{grid-template-columns:1fr}.agency-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .agency-report-head{display:block}.agency-actions{justify-content:flex-start;margin-top:12px}
+  .agency-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-form{grid-template-columns:1fr}
+}
+@media(max-width:360px){.history-card-meta{grid-template-columns:1fr}.vehicle-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .violation-list{padding:16px 20px}
 .violation-card{background:var(--aa-card);border:1px solid var(--aa-border);border-radius:12px;padding:14px;margin-bottom:10px;min-width:0}
@@ -1490,49 +1564,103 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 
   <!-- ADMIN -->
   <div class="screen" id="screen-admin" data-testid="screen-admin">
-    <header class="topbar">
-      <button type="button" class="icon-btn back-control" onclick="goBack('profile')" aria-label="Go back" title="Go Back" data-testid="button-back-admin"><svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
-      <h1 class="tb-title">Administration</h1>
-      <button type="button" class="icon-btn" onclick="runSync()" aria-label="Synchronize data" title="Synchronize data" data-testid="button-admin-sync"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-5V2"/><path d="M4 17h5v5"/><path d="M5.2 9A8 8 0 0118 5l2 2M18.8 15A8 8 0 016 19l-2-2"/></svg></button>
-    </header>
-    <div class="screen-scroll">
-      <main class="admin-body">
+    <div class="admin-shell">
+      <aside class="admin-sidebar" aria-label="Administration navigation">
+        <div class="admin-brand">
+          <svg class="admin-brand-mark" viewBox="0 0 36 36" fill="none" aria-label="Arrive Alive"><path d="M18 3 31 10.5v15L18 33 5 25.5v-15L18 3Z" fill="currentColor"/><path d="m11 23 7-13 7 13h-4l-3-6-3 6h-4Z" fill="#fff"/></svg>
+          <div><strong>Arrive Alive</strong><span>Control centre</span></div>
+        </div>
+        <div class="admin-identity" data-testid="admin-identity"><strong id="adminIdentityName">Administrator</strong><span id="adminIdentityPhone">Secure session</span></div>
+        <nav class="admin-nav">
+          <button type="button" class="admin-nav-button active" onclick="showAdminSection('adminOverview')" data-admin-section="adminOverview" data-testid="nav-admin-overview">Overview</button>
+          <button type="button" class="admin-nav-button" onclick="showAdminSection('adminUsersSection')" data-admin-section="adminUsersSection" data-testid="nav-admin-users">Users</button>
+          <button type="button" class="admin-nav-button" onclick="showAdminSection('adminReportsSection')" data-admin-section="adminReportsSection" data-testid="nav-admin-reports">Reports</button>
+          <button type="button" class="admin-nav-button" onclick="showAdminSection('adminAgenciesSection')" data-admin-section="adminAgenciesSection" data-testid="nav-admin-agencies">Agencies</button>
+          <button type="button" class="admin-nav-button" onclick="showAdminSection('adminVehiclesSection')" data-admin-section="adminVehiclesSection" data-testid="nav-admin-vehicles">Vehicles</button>
+          <button type="button" class="admin-nav-button" onclick="showAdminSection('adminSpeedSection')" data-admin-section="adminSpeedSection" data-testid="nav-admin-speed-limits">Speed limits</button>
+          <button type="button" class="admin-nav-button" onclick="showAdminSection('adminSyncSection')" data-admin-section="adminSyncSection" data-testid="nav-admin-sync-health">Sync Health</button>
+        </nav>
+        <div class="admin-nav-foot">
+          <button type="button" class="admin-nav-button" onclick="openProfile()" data-testid="button-admin-profile">Profile</button>
+          <button type="button" class="admin-nav-button danger" onclick="doLogout()" data-testid="button-admin-sign-out">Sign out</button>
+        </div>
+      </aside>
+      <div class="admin-workspace">
+        <header class="admin-header">
+          <div><h1>Administration</h1><p>Road safety operations across every vehicle type</p></div>
+          <div class="admin-header-actions">
+            <button type="button" class="admin-button" onclick="openProfile()" data-testid="button-back-admin">Profile</button>
+            <button type="button" class="admin-button primary" onclick="runSync()" data-testid="button-admin-sync">Synchronize</button>
+          </div>
+        </header>
+        <nav class="admin-mobile-sections" aria-label="Administration sections">
+          <button type="button" class="active" onclick="showAdminSection('adminOverview')" data-admin-section="adminOverview">Overview</button>
+          <button type="button" onclick="showAdminSection('adminUsersSection')" data-admin-section="adminUsersSection">Users</button>
+          <button type="button" onclick="showAdminSection('adminReportsSection')" data-admin-section="adminReportsSection">Reports</button>
+          <button type="button" onclick="showAdminSection('adminAgenciesSection')" data-admin-section="adminAgenciesSection">Agencies</button>
+          <button type="button" onclick="showAdminSection('adminVehiclesSection')" data-admin-section="adminVehiclesSection">Vehicles</button>
+          <button type="button" onclick="showAdminSection('adminSpeedSection')" data-admin-section="adminSpeedSection">Limits</button>
+          <button type="button" onclick="showAdminSection('adminSyncSection')" data-admin-section="adminSyncSection">Sync</button>
+        </nav>
+        <main class="admin-main" id="adminMain" data-testid="admin-primary-scroll">
+          <div class="admin-content">
         <div class="sync-banner" role="status" data-testid="admin-sync-health">
           <span class="sync-dot" id="syncDot"></span>
           <div class="sync-copy"><strong id="syncTitle">Local fallback</strong><span id="syncMessage">Checking API availability…</span></div>
         </div>
-        <section aria-labelledby="adminOverviewTitle">
-          <div class="section-heading"><h2 id="adminOverviewTitle">Overview</h2><span>Current client view</span></div>
+        <section class="admin-section" id="adminOverview" aria-labelledby="adminOverviewTitle">
+          <div class="admin-section-head"><div><h2 id="adminOverviewTitle">Overview</h2><p class="admin-section-copy">Current operational data in this workspace.</p></div></div>
           <div class="admin-grid" id="adminMetrics"></div>
         </section>
-        <section class="admin-section" aria-labelledby="adminUsersTitle">
-          <h2 id="adminUsersTitle">User management</h2>
-          <p class="admin-section-copy">Review accounts and enable or suspend local access.</p>
+        <section class="admin-section" id="adminUsersSection" aria-labelledby="adminUsersTitle">
+          <div class="admin-section-head"><div><h2 id="adminUsersTitle">User management</h2><p class="admin-section-copy">Review accounts and enable or suspend access.</p></div></div>
           <div class="admin-list" id="adminUsers"></div>
         </section>
-        <section class="admin-section" aria-labelledby="adminReportsTitle">
-          <h2 id="adminReportsTitle">Incident & report moderation</h2>
-          <p class="admin-section-copy">Resolve or reactivate community reports.</p>
+        <section class="admin-section" id="adminReportsSection" aria-labelledby="adminReportsTitle">
+          <div class="admin-section-head"><div><h2 id="adminReportsTitle">Incident & report moderation</h2><p class="admin-section-copy">Resolve or reactivate community reports.</p></div></div>
           <div class="admin-list" id="adminReports"></div>
         </section>
-        <section class="admin-section" aria-labelledby="adminBoardTitle">
-          <h2 id="adminBoardTitle">Speed Board & trusted agencies</h2>
-          <p class="admin-section-copy">Add agencies, set their score, and manage trusted status.</p>
+        <section class="admin-section" id="adminAgenciesSection" aria-labelledby="adminBoardTitle">
+          <div class="admin-section-head"><div><h2 id="adminBoardTitle">Agencies</h2><p class="admin-section-copy">Manage trusted operators and open a detailed safety report.</p></div></div>
           <form class="admin-form" onsubmit="event.preventDefault();addAgency()">
             <input id="adminAgencyName" aria-label="Agency name" placeholder="Agency name" maxlength="80" data-testid="input-admin-agency">
             <input id="adminAgencyScore" aria-label="Safety score" type="number" min="0" max="100" value="100" data-testid="input-admin-agency-score">
             <button type="submit" data-testid="button-add-agency">Add</button>
           </form>
-          <div class="admin-list" id="adminAgencies" style="margin-top:10px"></div>
-          <div class="admin-list" id="adminSpeedLimits" style="margin-top:10px"></div>
+          <div class="agency-layout">
+            <div class="agency-picker" id="adminAgencies" data-testid="admin-agency-picker"></div>
+            <div class="agency-report" id="adminAgencyReport" data-testid="admin-agency-report"></div>
+          </div>
         </section>
-        <section class="admin-section" aria-labelledby="adminSyncTitle">
-          <h2 id="adminSyncTitle">Synchronization health</h2>
-          <p class="admin-section-copy" id="adminSyncDetail">This build is checking its configured data adapter.</p>
+        <section class="admin-section" id="adminVehiclesSection" aria-labelledby="adminVehiclesTitle">
+          <div class="admin-section-head"><div><h2 id="adminVehiclesTitle">Vehicles</h2><p class="admin-section-copy">Journeys, speed and violations by vehicle type.</p></div></div>
+          <div class="vehicle-grid" id="adminVehicles" data-testid="admin-vehicle-sections"></div>
+        </section>
+        <section class="admin-section" id="adminSpeedSection" aria-labelledby="adminSpeedTitle">
+          <div class="admin-section-head"><div><h2 id="adminSpeedTitle">Speed limits</h2><p class="admin-section-copy">Durable defaults applied to new journeys.</p></div></div>
+          <div class="admin-list" id="adminSpeedLimits"></div>
+        </section>
+        <section class="admin-section" id="adminSyncSection" aria-labelledby="adminSyncTitle">
+          <div class="admin-section-head"><div><h2 id="adminSyncTitle">Synchronization health</h2><p class="admin-section-copy" id="adminSyncDetail">This build is checking its configured data adapter.</p></div></div>
           <button type="button" class="admin-link" onclick="runSync()" data-testid="button-retry-sync">Retry synchronization</button>
         </section>
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
+  </div>
+
+  <!-- PUBLIC AGENCY REPORT -->
+  <div class="screen" id="screen-public-report" data-testid="screen-public-report">
+    <main class="public-report-shell">
+      <div class="public-report-brand">
+        <svg viewBox="0 0 36 36" fill="none" aria-label="Arrive Alive"><path d="M18 3 31 10.5v15L18 33 5 25.5v-15L18 3Z" fill="currentColor"/><path d="m11 23 7-13 7 13h-4l-3-6-3 6h-4Z" fill="#fff"/></svg>
+        Arrive Alive
+      </div>
+      <article class="public-report-card" id="publicReportContent" aria-live="polite">
+        <h1>Agency safety report</h1><p class="public-report-meta">Loading verified public snapshot…</p>
+      </article>
+    </main>
   </div>
 
   <!-- ============ SPEED BOARD ============ -->
@@ -1637,6 +1765,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 </div>
 
 <script src="web-repository.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
 <script>
 /* ============================================================
    ARRIVE ALIVE — Road Safety Demo (MapLibre GL JS powered)
@@ -1654,7 +1783,7 @@ const aaRepository=ArriveAliveRepository.createRepository({
 window.__arriveAliveRepository=aaRepository;
 
 /* ---- Navigation ---- */
-const screens=['access','register','login','forgot','wizard','journey','profile','score','report','admin'];
+const screens=['access','register','login','forgot','wizard','journey','profile','score','report','admin','public-report'];
 let currentScreen='access';
 let historyDepth=0;
 function isRegisteredAccessAllowed(){return Boolean(getAASession()&&['user','admin'].includes(getAASession().role))}
@@ -1666,6 +1795,7 @@ function renderScreen(name,{preserveJourney=false}={}){
   }
   const previousScreen=currentScreen;
   currentScreen=name;
+  document.body.classList.toggle('admin-active',name==='admin');
   screens.forEach(s=>$('screen-'+s).classList.toggle('active',s===name));
   if(name==='journey'){
     if(previousScreen!=='journey')restoreMapboxDefault();
@@ -1675,12 +1805,13 @@ function renderScreen(name,{preserveJourney=false}={}){
   if(name==='profile'){renderProfile();}
   if(name==='score'){renderSpeedBoard();}
   if(name==='admin'){renderAdmin();}
+  if(name==='public-report'){loadPublicReport();}
   if(name==='report'){prepareReport();}
   if(name!=='journey'&&!preserveJourney)forceStationary();
 }
 function navigate(name,options={}){
   if(!screens.includes(name))return false;
-  const {replace=false,preserveJourney=false,fromPop=false}=options;
+  const {replace=false,preserveJourney=false,fromPop=false,slug=null}=options;
   if(['profile','score'].includes(name)&&!isRegisteredAccessAllowed()){
     openAuthGate(name);
     return false;
@@ -1690,11 +1821,12 @@ function navigate(name,options={}){
     return false;
   }
   if(!fromPop){
+    const hash=name==='public-report'&&slug?`#/reports/${encodeURIComponent(slug)}`:`#/${name}`;
     if(replace){
-      window.history.replaceState({aaScreen:name,aaDepth:historyDepth},'',window.location.href);
+      window.history.replaceState({aaScreen:name,aaDepth:historyDepth,slug},'',hash);
     }else if(name!==currentScreen){
       historyDepth+=1;
-      window.history.pushState({aaScreen:name,aaDepth:historyDepth},'',window.location.href);
+      window.history.pushState({aaScreen:name,aaDepth:historyDepth,slug},'',hash);
     }
   }
   renderScreen(name,{preserveJourney});
@@ -1712,14 +1844,23 @@ function goBack(fallback='access'){
   if(state&&state.aaDepth>0){window.history.back();return;}
   navigate(fallback,{replace:true,preserveJourney:fallback==='journey'&&journeyActive});
 }
-window.history.replaceState({aaScreen:'access',aaDepth:0},'',window.location.href);
+function parseAppHash(){
+  let raw='';try{raw=decodeURIComponent(window.location.hash||'').toLowerCase()}catch(_){return{screen:null,slug:null}}
+  const normalized=raw.replace(/^#\/?/,'');
+  const publicMatch=normalized.match(/^reports\/([a-z0-9_-]+)$/);
+  if(publicMatch)return{screen:'public-report',slug:publicMatch[1]};
+  const aliases={admin:'admin',profile:'profile',score:'score',wizard:'wizard',journey:'journey',access:'access',login:'login'};
+  return{screen:aliases[normalized]||null,slug:null};
+}
+const initialRoute=parseAppHash();
+window.history.replaceState({aaScreen:initialRoute.screen||'access',aaDepth:0,slug:initialRoute.slug},'',initialRoute.screen==='public-report'?window.location.hash:'#/'+(initialRoute.screen||'access'));
 window.addEventListener('popstate',event=>{
   if($('guideModal').classList.contains('show'))closeGuide(false);
   if($('authGateModal').classList.contains('show'))closeAuthGate();
   if($('navOverlay').classList.contains('show'))$('navOverlay').classList.remove('show');
   const state=event.state;
   historyDepth=state&&Number.isFinite(state.aaDepth)?state.aaDepth:0;
-  let target=state&&screens.includes(state.aaScreen)?state.aaScreen:'access';
+  let target=state&&screens.includes(state.aaScreen)?state.aaScreen:(parseAppHash().screen||'access');
   if(['profile','score'].includes(target)&&!isRegisteredAccessAllowed()){
     target='access';
     window.history.replaceState({aaScreen:'access',aaDepth:historyDepth},'',window.location.href);
@@ -1925,13 +2066,27 @@ function doLogout(){
 }
 
 function checkSessionOnLoad(){
+  if(initialRoute.screen==='public-report'){navigate('public-report',{replace:true,slug:initialRoute.slug});return;}
   const session=getAASession();
   if(session){
     journey.driver=session.name;
     showToast('Welcome back, '+session.name);
-    if(session.role==='admin'){resetNavigation('admin');renderAdmin();}
+    if(initialRoute.screen==='admin'&&session.role==='admin'){resetNavigation('admin');renderAdmin();}
+    else if(initialRoute.screen==='profile'){resetNavigation('profile');renderProfile();}
+    else if(initialRoute.screen==='score'){resetNavigation('score');renderSpeedBoard();}
+    else if(session.role==='admin'){resetNavigation('admin');renderAdmin();}
     else{resetNavigation('wizard');renderWiz();}
-  }else updateAuthenticatedControls();
+  }else{
+    updateAuthenticatedControls();
+    if(initialRoute.screen==='admin'){
+      navigate('login',{replace:true});
+      $('loginError').textContent='Sign in with an administrator account to continue.';
+      $('loginError').classList.add('show');
+    }else if(['profile','score'].includes(initialRoute.screen||'')){
+      navigate('access',{replace:true});
+      openAuthGate(initialRoute.screen);
+    }else navigate('access',{replace:true});
+  }
 }
 
 /* ---- Theme ---- */
@@ -3464,14 +3619,14 @@ let AGENCIES=[
   {id:'agency-d',name:'Agency D',region:'Kribi — S',score:100,violations:0}
 ];
 const VIOLATIONS=[
-  {plate:'NW 1234 AB',agency:'Amour Mezam',speed:112,limit:90,where:'N1 near Bafoussam',when:'Today, 08:14'},
-  {plate:'LT 5678 CD',agency:'Guarantee Express',speed:98,limit:80,where:'N3 near Edéa',when:'Today, 09:02'},
-  {plate:'CE 9012 EF',agency:'Budem',speed:95,limit:80,where:'N4 near Bamenda',when:'Yesterday, 18:40'},
-  {plate:'NW 3456 GH',agency:'Meta Express',speed:62,limit:50,where:'Bamenda city',when:'Yesterday, 14:22'},
-  {plate:'SW 7890 IJ',agency:'Touristique Express',speed:88,limit:70,where:'N5 near Kumba',when:'2 days ago'},
-  {plate:'LT 2345 KL',agency:'General Express',speed:105,limit:80,where:'Douala — Yaoundé',when:'2 days ago'},
-  {plate:'NW 6789 MN',agency:'Amour Mezam',speed:74,limit:50,where:'Bamenda ring road',when:'3 days ago'},
-  {plate:'CE 0123 OP',agency:'Budem',speed:102,limit:80,where:'Yaoundé — Bafoussam',when:'3 days ago'}
+  {plate:'NW 1234 AB',agency:'Amour Mezam',mode:'bus',speed:112,limit:90,where:'N1 near Bafoussam',when:'Today, 08:14'},
+  {plate:'LT 5678 CD',agency:'Guarantee Express',mode:'bus',speed:98,limit:80,where:'N3 near Edéa',when:'Today, 09:02'},
+  {plate:'CE 9012 EF',agency:'Budem',mode:'lorry',speed:95,limit:80,where:'N4 near Bamenda',when:'Yesterday, 18:40'},
+  {plate:'NW 3456 GH',agency:'Meta Express',mode:'car',speed:62,limit:50,where:'Bamenda city',when:'Yesterday, 14:22'},
+  {plate:'SW 7890 IJ',agency:'Touristique Express',mode:'motorbike',speed:88,limit:70,where:'N5 near Kumba',when:'2 days ago'},
+  {plate:'LT 2345 KL',agency:'General Express',mode:'lorry',speed:105,limit:80,where:'Douala — Yaoundé',when:'2 days ago'},
+  {plate:'NW 6789 MN',agency:'Amour Mezam',mode:'car',speed:74,limit:50,where:'Bamenda ring road',when:'3 days ago'},
+  {plate:'CE 0123 OP',agency:'Budem',mode:'bus',speed:102,limit:80,where:'Yaoundé — Bafoussam',when:'3 days ago'}
 ];
 
 function getProfileInitials(name){
@@ -3646,29 +3801,114 @@ function switchTab(btn,tabId){
   $('tab-violations').style.display=tabId==='tab-violations'?'block':'none';
 }
 
+let selectedAdminAgencyId=null;
+function modeLabel(mode){return mode==='lorry'?'Lorry':mode==='motorbike'?'Motorbike':mode==='bus'?'Bus':'Car'}
+function journeyValue(item,key,fallback=0){
+  const summary=item.summary||{};
+  const aliases={maximumSpeedKmh:['maximumSpeedKmh','maxSpeed','max_speed'],averageSpeedKmh:['averageSpeedKmh','avgSpeed','avg_speed'],violations:['violations','violationCount','violation_count']};
+  for(const candidate of aliases[key]||[key])if(Number.isFinite(Number(summary[candidate]??item[candidate])))return Number(summary[candidate]??item[candidate]);
+  return fallback;
+}
+function journeyAgencyName(item){
+  return String(item.agency||item.agencyName||item.vehicle?.agency||item.vehicleDetails?.agency||'').trim();
+}
+function getVehicleData(mode,agencyName=null){
+  const journeys=aaRepository.list('journeys',item=>(item.mode||'car')===mode&&(!agencyName||journeyAgencyName(item)===agencyName));
+  const violations=VIOLATIONS.filter(item=>item.mode===mode&&(!agencyName||item.agency===agencyName));
+  const plates=new Set([
+    ...violations.map(item=>item.plate),
+    ...journeys.map(item=>item.vehicle?.reg||item.vehicleDetails?.reg||item.reg).filter(Boolean)
+  ]);
+  const speeds=[...journeys.map(item=>journeyValue(item,'maximumSpeedKmh',0)),...violations.map(item=>Number(item.speed)||0)].filter(value=>value>0);
+  const averages=journeys.map(item=>journeyValue(item,'averageSpeedKmh',0)).filter(value=>value>0);
+  return{mode,journeys,violations,vehicleCount:plates.size,maxSpeed:speeds.length?Math.max(...speeds):0,averageSpeed:averages.length?averages.reduce((a,b)=>a+b,0)/averages.length:(speeds.length?speeds.reduce((a,b)=>a+b,0)/speeds.length:0),limit:getAdminSpeedLimit(mode)};
+}
+function agencySnapshot(agency){
+  const breakdown=['car','bus','lorry','motorbike'].map(mode=>getVehicleData(mode,agency.name));
+  const journeys=breakdown.flatMap(item=>item.journeys);
+  const violations=breakdown.flatMap(item=>item.violations);
+  const vehicles=breakdown.reduce((sum,item)=>sum+item.vehicleCount,0);
+  return{
+    reportVersion:1,generatedAt:new Date().toISOString(),
+    agency:{id:String(agency.id),name:agency.name,region:agency.region||'Not specified',safetyScore:Number(agency.score)||0,trusted:Number(agency.score)===100},
+    metrics:{vehicles,journeys:journeys.length,violations:violations.length,safetyScore:Number(agency.score)||0},
+    vehicleBreakdown:breakdown.map(item=>({mode:item.mode,vehicles:item.vehicleCount,journeys:item.journeys.length,violations:item.violations.length,maxSpeed:Number(item.maxSpeed.toFixed(1)),averageSpeed:Number(item.averageSpeed.toFixed(1)),speedLimit:item.limit})),
+    journeys:journeys.slice(0,100).map(item=>({id:String(item.id),mode:item.mode||'car',endedAt:item.endedAt||item.endTime||item.updatedAt||null,distanceKm:Number(item.summary?.distanceKm||item.distance||0),maxSpeed:Number(journeyValue(item,'maximumSpeedKmh',0).toFixed(1)),averageSpeed:Number(journeyValue(item,'averageSpeedKmh',0).toFixed(1)),violations:journeyValue(item,'violations',0)})),
+    violations:violations.slice(0,100).map(item=>({mode:item.mode,plate:item.plate,speed:item.speed,limit:item.limit,route:item.where,time:item.when}))
+  };
+}
+function showAdminSection(id){
+  const target=$(id);if(!target)return;
+  document.querySelectorAll('[data-admin-section]').forEach(button=>button.classList.toggle('active',button.dataset.adminSection===id));
+  target.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+}
+function selectAdminAgency(id){selectedAdminAgencyId=id;renderAdminAgencies()}
+function renderAdminVehicles(){
+  $('adminVehicles').innerHTML=['car','bus','lorry','motorbike'].map(mode=>{
+    const data=getVehicleData(mode);
+    const records=[
+      ...data.violations.slice(0,3).map(item=>({record:item.plate,detail:item.where,speed:item.speed,kind:'Violation'})),
+      ...data.journeys.slice(0,3).map(item=>({record:item.vehicle?.reg||item.vehicleDetails?.reg||item.id,detail:item.endedAt?new Date(item.endedAt).toLocaleDateString():'Journey',speed:journeyValue(item,'maximumSpeedKmh',0),kind:'Journey'}))
+    ];
+    return`<article class="vehicle-panel" data-testid="vehicle-section-${mode}">
+      <div class="vehicle-panel-head"><h3>${modeLabel(mode)}</h3><span>${data.vehicleCount} vehicle${data.vehicleCount===1?'':'s'}</span></div>
+      <div class="vehicle-stats">
+        <div class="vehicle-stat"><span>Journeys</span><strong>${data.journeys.length}</strong></div>
+        <div class="vehicle-stat"><span>Violations</span><strong>${data.violations.length}</strong></div>
+        <div class="vehicle-stat"><span>Max speed</span><strong>${data.maxSpeed.toFixed(0)} km/h</strong></div>
+        <div class="vehicle-stat"><span>Average</span><strong>${data.averageSpeed.toFixed(0)} km/h</strong></div>
+        <div class="vehicle-stat"><span>Speed limit</span><strong>${data.limit} km/h</strong></div>
+      </div>
+      ${records.length?`<div class="record-table-wrap"><table class="record-table"><thead><tr><th>Record</th><th>Type</th><th>Detail</th><th>Speed</th></tr></thead><tbody>${records.map(item=>`<tr><td>${escapeHTML(String(item.record))}</td><td>${item.kind}</td><td>${escapeHTML(String(item.detail))}</td><td>${Number(item.speed||0).toFixed(0)} km/h</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state compact">No vehicle records for this type yet.</div>'}
+    </article>`;
+  }).join('');
+}
+function renderAdminAgencies(){
+  if(!AGENCIES.length){$('adminAgencies').innerHTML='<div class="empty-state compact">Add an agency to begin.</div>';$('adminAgencyReport').innerHTML='<div class="empty-state">Agency reports appear here.</div>';return;}
+  if(!AGENCIES.some(item=>String(item.id)===String(selectedAdminAgencyId)))selectedAdminAgencyId=String(AGENCIES[0].id);
+  const agency=AGENCIES.find(item=>String(item.id)===String(selectedAdminAgencyId))||AGENCIES[0];
+  $('adminAgencies').innerHTML=AGENCIES.map(item=>`<button type="button" class="${String(item.id)===String(agency.id)?'active':''}" onclick="selectAdminAgency('${escapeHTML(String(item.id))}')" data-testid="admin-agency-${escapeHTML(String(item.id))}">${escapeHTML(item.name)}<span>${Number(item.score)||0} score · ${item.score===100?'Trusted':'Standard'}</span></button>`).join('');
+  const snapshot=agencySnapshot(agency);
+  $('adminAgencyReport').innerHTML=`
+    <div class="agency-report-head">
+      <div><h3 data-testid="agency-report-title">${escapeHTML(agency.name)}</h3><p>${escapeHTML(agency.region||'Region not specified')} · <span class="${snapshot.agency.trusted?'trusted-status':''}">${snapshot.agency.trusted?'Trusted operator':'Standard operator'}</span></p></div>
+      <div class="agency-actions">
+        <button type="button" class="admin-button" onclick="toggleAgencyTrusted('${escapeHTML(String(agency.id))}')" data-testid="button-agency-trust">${snapshot.agency.trusted?'Remove trust':'Mark trusted'}</button>
+        <button type="button" class="admin-button" onclick="exportAgencyPDF()" data-testid="button-export-agency-pdf">Export PDF</button>
+        <button type="button" class="admin-button primary" onclick="shareAgencyReport()" data-testid="button-share-agency-report">Share report</button>
+      </div>
+    </div>
+    <div class="agency-metrics">
+      <div class="agency-metric"><span>Safety score</span><strong>${snapshot.metrics.safetyScore}/100</strong></div>
+      <div class="agency-metric"><span>Vehicles</span><strong>${snapshot.metrics.vehicles}</strong></div>
+      <div class="agency-metric"><span>Journeys</span><strong>${snapshot.metrics.journeys}</strong></div>
+      <div class="agency-metric"><span>Violations</span><strong>${snapshot.metrics.violations}</strong></div>
+    </div>
+    <div class="record-table-wrap"><table class="record-table" data-testid="agency-vehicle-breakdown"><thead><tr><th>Vehicle type</th><th>Vehicles</th><th>Journeys</th><th>Violations</th><th>Max / average</th><th>Limit</th></tr></thead><tbody>${snapshot.vehicleBreakdown.map(item=>`<tr><td>${modeLabel(item.mode)}</td><td>${item.vehicles}</td><td>${item.journeys}</td><td>${item.violations}</td><td>${item.maxSpeed} / ${item.averageSpeed} km/h</td><td>${item.speedLimit} km/h</td></tr>`).join('')}</tbody></table></div>
+    <p class="share-status" id="agencyShareStatus" role="status" data-testid="agency-share-status"></p>`;
+}
 function renderAdmin(){
-  if(!isAdminAccessAllowed()){navigate('profile',{replace:true});return;}
-  const users=aaRepository.list('users');
+  if(!isAdminAccessAllowed()){navigate('access',{replace:true});return;}
+  const session=getAASession(),users=aaRepository.list('users'),journeys=aaRepository.list('journeys');
   const reports=hazards.filter(item=>item.source==='community');
+  const totalViolations=journeys.reduce((sum,item)=>sum+journeyValue(item,'violations',0),0)+VIOLATIONS.length;
+  $('adminIdentityName').textContent=session.name||'Administrator';$('adminIdentityPhone').textContent=session.phone||'Secure session';
   $('adminMetrics').innerHTML=[
-    ['Users',users.length],['Journeys',aaRepository.list('journeys').length],
-    ['Active reports',reports.filter(item=>item.status==='active').length],['Trusted agencies',AGENCIES.filter(item=>item.score===100).length]
-  ].map(([label,value])=>`<div class="admin-metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    ['Users',users.length,'Registered accounts'],['Journeys',journeys.length,'Recorded trips'],
+    ['Violations',totalViolations,'All current records'],['Active reports',reports.filter(item=>item.status==='active').length,'Need attention'],
+    ['Trusted agencies',AGENCIES.filter(item=>item.score===100).length,`${AGENCIES.length} total agencies`]
+  ].map(([label,value,detail],index)=>`<div class="admin-metric" data-testid="admin-kpi-${index}"><span>${label}</span><strong>${value}</strong><small>${detail}</small></div>`).join('');
   $('adminUsers').innerHTML=users.length?users.map(user=>`
     <div class="admin-row" data-testid="admin-user-${escapeHTML(user.phone||user.id)}">
-      <div class="admin-row-copy"><strong>${escapeHTML(user.name)}</strong><span>${escapeHTML(user.phone)} · ${escapeHTML(user.role||'user')}</span></div>
-      ${user.role==='admin'?'':`<button type="button" class="admin-control" onclick="toggleUserStatus('${escapeHTML(user.id)}')">${user.status==='suspended'?'Enable':'Suspend'}</button>`}
-    </div>`).join(''):'<div class="empty-state">No registered users on this device.</div>';
+      <div class="admin-row-copy"><strong>${escapeHTML(user.name||user.displayName||'Account')}</strong><span>${escapeHTML(user.phone||'No phone')} · ${escapeHTML(user.role||'user')}</span></div>
+      ${user.role==='admin'?'':`<button type="button" class="admin-control" onclick="toggleUserStatus('${escapeHTML(user.id)}')" data-testid="button-toggle-user-${escapeHTML(user.id)}">${user.status==='suspended'?'Enable':'Suspend'}</button>`}
+    </div>`).join(''):'<div class="empty-state">No registered users in this workspace.</div>';
   $('adminReports').innerHTML=reports.length?reports.slice().reverse().map(report=>`
     <div class="admin-row" data-testid="admin-report-${escapeHTML(report.id)}">
       <div class="admin-row-copy"><strong>${escapeHTML(report.label)}</strong><span>${escapeHTML(report.status)} · ${new Date(report.updatedAt).toLocaleString()}</span></div>
-      <button type="button" class="admin-control" onclick="moderateReport('${escapeHTML(report.id)}','${report.status==='active'?'resolved':'active'}')">${report.status==='active'?'Resolve':'Reactivate'}</button>
-    </div>`).join(''):'<div class="empty-state">No community reports to moderate.</div>';
-  $('adminAgencies').innerHTML=AGENCIES.map(agency=>`
-    <div class="admin-row" data-testid="admin-agency-${escapeHTML(agency.id)}">
-      <div class="admin-row-copy"><strong>${escapeHTML(agency.name)}</strong><span>${agency.score} safety score · ${agency.score===100?'Trusted':'Standard'}</span></div>
-      <button type="button" class="admin-control" onclick="toggleAgencyTrusted('${escapeHTML(agency.id)}')">${agency.score===100?'Remove trust':'Trust'}</button>
-    </div>`).join('');
+      <button type="button" class="admin-control" onclick="moderateReport('${escapeHTML(report.id)}','${report.status==='active'?'resolved':'active'}')" data-testid="button-moderate-report-${escapeHTML(report.id)}">${report.status==='active'?'Resolve':'Reactivate'}</button>
+    </div>`).join(''):'<div class="empty-state">No community reports need moderation.</div>';
+  renderAdminAgencies();renderAdminVehicles();
   $('adminSpeedLimits').innerHTML=MODES.map(mode=>`
     <label class="admin-row"><span>${escapeHTML(mode.label)} limit</span>
       <select class="admin-control" onchange="setAdminSpeedLimit('${mode.id}',this.value);renderAdmin()" data-testid="select-speed-limit-${mode.id}">
@@ -3676,6 +3916,95 @@ function renderAdmin(){
       </select>
     </label>`).join('');
   renderSyncHealth();
+}
+function getSelectedAgency(){
+  return AGENCIES.find(item=>String(item.id)===String(selectedAdminAgencyId))||AGENCIES[0]||null;
+}
+function exportAgencyPDF(){
+  const agency=getSelectedAgency();if(!agency)return;
+  if(!window.jspdf?.jsPDF){showToast('PDF exporter is unavailable');return;}
+  const report=agencySnapshot(agency),{jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'});
+  doc.setProperties({title:`Arrive Alive - ${agency.name} Safety Report`,author:'Perplexity Computer',subject:'Agency road safety report',keywords:'Arrive Alive, road safety, agency report'});
+  const pageWidth=210,margin=16,bottom=282;let y=18,page=1;
+  const clean=value=>String(value??'').replace(/[^\x20-\x7E]/g,'-');
+  function header(){
+    doc.setFillColor(67,97,238);doc.rect(0,0,pageWidth,12,'F');
+    doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('ARRIVE ALIVE',margin,8);
+    doc.setTextColor(99,112,138);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(`Page ${page}`,pageWidth-margin,290,{align:'right'});
+  }
+  function nextPage(required=10){if(y+required<=bottom)return;doc.addPage();page+=1;y=20;header();}
+  function section(title){nextPage(12);doc.setTextColor(23,33,58);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(clean(title),margin,y);y+=7;}
+  function table(headers,rows,widths){
+    const rowH=7;nextPage(rowH*2);
+    doc.setFillColor(238,242,255);doc.rect(margin,y,pageWidth-margin*2,rowH,'F');
+    doc.setTextColor(49,71,199);doc.setFont('helvetica','bold');doc.setFontSize(7.5);
+    let x=margin+2;headers.forEach((label,index)=>{doc.text(clean(label),x,y+4.7);x+=widths[index]});y+=rowH;
+    doc.setFont('helvetica','normal');doc.setTextColor(23,33,58);
+    for(const row of rows){nextPage(rowH);x=margin+2;row.forEach((value,index)=>{doc.text(clean(value).slice(0,42),x,y+4.7);x+=widths[index]});doc.setDrawColor(232,237,246);doc.line(margin,y+rowH,pageWidth-margin,y+rowH);y+=rowH;}
+  }
+  header();y=22;
+  doc.setTextColor(23,33,58);doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text('Agency Safety Report',margin,y);y+=8;
+  doc.setFontSize(14);doc.text(clean(agency.name),margin,y);y+=6;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(99,112,138);
+  doc.text(`${clean(agency.region||'Region not specified')} | Generated ${new Date(report.generatedAt).toLocaleString()}`,margin,y);y+=10;
+  const metricLabels=[['Safety score',`${report.metrics.safetyScore}/100`],['Vehicles',report.metrics.vehicles],['Journeys',report.metrics.journeys],['Violations',report.metrics.violations]];
+  metricLabels.forEach(([label,value],index)=>{const x=margin+index*44.5;doc.setFillColor(248,250,255);doc.roundedRect(x,y,41,18,2,2,'F');doc.setTextColor(99,112,138);doc.setFontSize(7.5);doc.text(label,x+3,y+5);doc.setTextColor(23,33,58);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(String(value),x+3,y+13);doc.setFont('helvetica','normal')});y+=25;
+  section('Vehicle breakdown');
+  table(['Type','Vehicles','Journeys','Violations','Max / avg','Limit'],report.vehicleBreakdown.map(item=>[modeLabel(item.mode),item.vehicles,item.journeys,item.violations,`${item.maxSpeed} / ${item.averageSpeed}`,`${item.speedLimit} km/h`]),[30,22,23,24,37,24]);
+  section('Journey records');
+  if(report.journeys.length)table(['Date','Type','Distance','Max','Average','Violations'],report.journeys.map(item=>[item.endedAt?new Date(item.endedAt).toLocaleDateString():'-',modeLabel(item.mode),`${item.distanceKm.toFixed(1)} km`,`${item.maxSpeed} km/h`,`${item.averageSpeed} km/h`,item.violations]),[32,25,28,26,28,24]);
+  else{doc.setFontSize(9);doc.setTextColor(99,112,138);doc.text('No agency-linked journey records are currently available.',margin,y);y+=8;}
+  section('Violation records');
+  if(report.violations.length)table(['Vehicle','Type','Measured','Limit','Route','Time'],report.violations.map(item=>[item.plate,modeLabel(item.mode),`${item.speed} km/h`,`${item.limit} km/h`,item.route,item.time]),[31,24,27,24,50,28]);
+  else{doc.setFontSize(9);doc.setTextColor(99,112,138);doc.text('No violation records are currently available.',margin,y);}
+  doc.save(`arrive-alive-${agency.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')}-report.pdf`);
+}
+function renderShareActions(url){
+  const status=$('agencyShareStatus');if(!status)return;
+  const encoded=encodeURIComponent(url),text=encodeURIComponent(`Arrive Alive safety report for ${getSelectedAgency()?.name||'agency'}`);
+  status.innerHTML=`Public snapshot ready: <a href="${escapeHTML(url)}" target="_blank" rel="noopener" data-testid="link-public-agency-report">Open report</a>
+    <span class="agency-actions">
+      <button type="button" class="admin-button" onclick="copyPublicReportLink('${escapeHTML(url)}')" data-testid="button-copy-report-link">Copy link</button>
+      ${navigator.share?`<button type="button" class="admin-button" onclick="nativeShareReport('${escapeHTML(url)}')" data-testid="button-native-share">Share</button>`:''}
+      <a class="admin-button" href="mailto:?subject=${text}&body=${encoded}" data-testid="link-email-report">Email</a>
+      <a class="admin-button" href="https://wa.me/?text=${text}%20${encoded}" target="_blank" rel="noopener" data-testid="link-whatsapp-report">WhatsApp</a>
+    </span>`;
+}
+async function copyPublicReportLink(url){try{await navigator.clipboard.writeText(url);showToast('Report link copied')}catch(_){showToast('Copy the link from the report')}}
+async function nativeShareReport(url){try{await navigator.share({title:'Arrive Alive agency safety report',text:`Safety report for ${getSelectedAgency()?.name||'travel agency'}`,url})}catch(_){}}
+async function shareAgencyReport(){
+  const agency=getSelectedAgency(),status=$('agencyShareStatus');if(!agency||!status)return;
+  if(!APP_API_URL){status.textContent='Public links require the Supabase app API deployment. The report remains private on this device.';return;}
+  status.textContent='Publishing a sanitized public snapshot…';
+  try{
+    const payload=await callAppApi('/api/public-reports',{method:'POST',token:getAASession()?.token,body:{snapshot:agencySnapshot(agency)}});
+    const url=new URL(window.location.href);url.hash=`/reports/${payload.slug}`;
+    renderShareActions(url.toString());
+  }catch(error){status.textContent=`Could not publish report: ${error.message}`;}
+}
+async function loadPublicReport(){
+  const slug=window.history.state?.slug||parseAppHash().slug,container=$('publicReportContent');
+  if(!slug){container.innerHTML='<h1>Report not found</h1><p class="public-report-meta">This public report link is incomplete.</p>';return;}
+  document.title='Agency Safety Report | Arrive Alive';
+  if(!APP_API_URL){container.innerHTML='<h1>Report unavailable</h1><p class="public-report-meta">The public report API is not configured for this deployment.</p>';return;}
+  try{
+    const response=await fetch(`${APP_API_URL}/api/public-reports/${encodeURIComponent(slug)}`,{headers:{Accept:'application/json'}});
+    const payload=await response.json();if(!response.ok)throw new Error(payload.error||'Report not found');
+    const report=payload.snapshot,agency=report.agency,breakdown=Array.isArray(report.vehicleBreakdown)?report.vehicleBreakdown:[];
+    container.innerHTML=`<h1>${escapeHTML(agency.name)} safety report</h1>
+      <p class="public-report-meta">${escapeHTML(agency.region||'Region not specified')} · Published ${new Date(payload.createdAt||report.generatedAt).toLocaleString()}</p>
+      <div class="agency-metrics">
+        <div class="agency-metric"><span>Safety score</span><strong>${Number(report.metrics?.safetyScore||0)}/100</strong></div>
+        <div class="agency-metric"><span>Vehicles</span><strong>${Number(report.metrics?.vehicles||0)}</strong></div>
+        <div class="agency-metric"><span>Journeys</span><strong>${Number(report.metrics?.journeys||0)}</strong></div>
+        <div class="agency-metric"><span>Violations</span><strong>${Number(report.metrics?.violations||0)}</strong></div>
+      </div>
+      <div class="record-table-wrap"><table class="record-table"><thead><tr><th>Vehicle type</th><th>Vehicles</th><th>Journeys</th><th>Violations</th><th>Max / average</th><th>Limit</th></tr></thead><tbody>${breakdown.map(item=>`<tr><td>${modeLabel(item.mode)}</td><td>${Number(item.vehicles||0)}</td><td>${Number(item.journeys||0)}</td><td>${Number(item.violations||0)}</td><td>${Number(item.maxSpeed||0)} / ${Number(item.averageSpeed||0)} km/h</td><td>${Number(item.speedLimit||0)} km/h</td></tr>`).join('')}</tbody></table></div>
+      <div class="public-report-actions">
+        <button type="button" class="admin-button" onclick="copyPublicReportLink(window.location.href)" data-testid="button-public-copy-link">Copy link</button>
+        ${navigator.share?'<button type="button" class="admin-button primary" onclick="nativeShareReport(window.location.href)" data-testid="button-public-native-share">Share report</button>':''}
+      </div>`;
+  }catch(error){container.innerHTML=`<h1>Report unavailable</h1><p class="public-report-meta">${escapeHTML(error.message)}</p>`;}
 }
 function toggleUserStatus(id){
   const publicUser=aaRepository.list('users',item=>item.id===id)[0];
@@ -3867,17 +4196,7 @@ window.addEventListener('load',()=>{
   }else renderSyncHealth();
   loadMapboxConfig();
   if(window.speechSynthesis)window.speechSynthesis.getVoices();
-  const hash=window.location.hash.toLowerCase();
-  const directTarget=hash==='#score'?'score':hash==='#profile'?'profile':hash==='#admin'?'admin':null;
-  if(directTarget==='admin'&&!isAdminAccessAllowed()){
-    window.history.replaceState({aaScreen:'access',aaDepth:0},'',window.location.pathname+window.location.search);
-    setTimeout(()=>showToast('Administrator access required'),2100);
-  }else
-  if(directTarget&&!isRegisteredAccessAllowed()){
-    window.history.replaceState({aaScreen:'access',aaDepth:0},'',window.location.pathname+window.location.search);
-    setTimeout(()=>openAuthGate(directTarget),2100);
-  }
-  setTimeout(maybeOpenFirstVisitGuide,2200);
+  if(initialRoute.screen!=='public-report')setTimeout(maybeOpenFirstVisitGuide,2200);
   // Check for existing session (auto-login on reload)
   setTimeout(()=>checkSessionOnLoad(),2600); // After splash fades
 });

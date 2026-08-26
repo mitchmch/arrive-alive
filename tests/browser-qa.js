@@ -15,13 +15,28 @@ const path = require('node:path');
   await page.locator('#loginPin').fill('1234');
   await page.getByTestId('button-submit-login').click();
   await page.waitForSelector('[data-testid="screen-admin"].active');
+  assert.equal(new URL(page.url()).hash, '#/admin');
+  assert.equal(await page.locator('[data-testid^="admin-kpi-"]').count(), 5);
+  for (const mode of ['car','bus','lorry','motorbike']) {
+    await page.waitForSelector(`[data-testid="vehicle-section-${mode}"]`);
+  }
+  await page.getByTestId('admin-agency-Amour Mezam').click().catch(() => {});
+  assert.match(await page.getByTestId('agency-report-title').innerText(), /Amour Mezam|Budem|Express|Agency/);
+  assert.equal(await page.getByTestId('agency-vehicle-breakdown').locator('tbody tr').count(), 4);
 
   assert.match(await page.getByTestId('admin-sync-health').innerText(), /not durable|Local fallback/i);
   await page.getByTestId('input-admin-agency').fill('QA Transit');
   await page.getByTestId('input-admin-agency-score').fill('92');
   await page.getByTestId('button-add-agency').click();
   await page.waitForSelector('[data-testid^="admin-agency-"] >> text=QA Transit');
+  await page.getByTestId('button-share-agency-report').click();
+  assert.match(await page.getByTestId('agency-share-status').innerText(), /require the Supabase app API deployment|Could not publish report/i);
   await page.screenshot({path: path.join(__dirname, 'admin-mobile.png'), fullPage: false});
+
+  await page.goto('http://127.0.0.1:3000/#admin', {waitUntil: 'domcontentloaded'});
+  await page.waitForSelector('[data-testid="screen-admin"].active');
+  assert.equal(new URL(page.url()).hash, '#/admin');
+  assert.match(await page.getByTestId('admin-identity').innerText(), /admin/i);
 
   await page.getByTestId('button-back-admin').click();
   await page.waitForSelector('[data-testid="screen-profile"].active');
@@ -56,6 +71,26 @@ const path = require('node:path');
   assert.ok(layout.activeWidth <= layout.viewportWidth);
   assert.equal(layout.historyVisible, true);
   assert.deepEqual(pageErrors, []);
+
+  const desktop = await browser.newContext({viewport: {width: 1440, height: 900}});
+  const desktopPage = await desktop.newPage();
+  await desktopPage.goto('http://127.0.0.1:3000', {waitUntil: 'domcontentloaded'});
+  await desktopPage.getByTestId('button-sign-in').click();
+  await desktopPage.locator('#loginPhone').fill('admin');
+  await desktopPage.locator('#loginPin').fill('1234');
+  await desktopPage.getByTestId('button-submit-login').click();
+  await desktopPage.waitForSelector('[data-testid="screen-admin"].active');
+  const desktopLayout = await desktopPage.evaluate(() => ({
+    bodyWidth: document.body.scrollWidth,
+    viewportWidth: innerWidth,
+    sidebarVisible: getComputedStyle(document.querySelector('.admin-sidebar')).display !== 'none',
+    primaryOverflow: getComputedStyle(document.querySelector('[data-testid="admin-primary-scroll"]')).overflowY,
+  }));
+  assert.equal(desktopLayout.bodyWidth, desktopLayout.viewportWidth);
+  assert.equal(desktopLayout.sidebarVisible, true);
+  assert.equal(desktopLayout.primaryOverflow, 'auto');
+  await desktopPage.screenshot({path: path.join(__dirname, 'admin-desktop.png'), fullPage: false});
+  await desktop.close();
   await browser.close();
   console.log('Browser QA passed:', layout);
 })().catch(error => {

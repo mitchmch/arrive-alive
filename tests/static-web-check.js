@@ -87,9 +87,24 @@ assert.match(html, /ownerId:session\?`user-\$\{session\.phone\}`:null/, 'Saved j
 
 assert.match(html, /id="screen-admin"[^>]*data-testid="screen-admin"/, 'A stable admin screen must exist');
 assert.match(html, /name==='admin'&&!isAdminAccessAllowed\(\)/, 'Admin navigation must enforce the admin role');
-for (const heading of ['Overview', 'User management', 'Incident & report moderation', 'Speed Board & trusted agencies', 'Synchronization health']) {
+for (const heading of ['Overview', 'User management', 'Incident & report moderation', 'Agencies', 'Vehicles', 'Speed limits', 'Synchronization health']) {
   assert.match(html, new RegExp(`>${heading}<`), `Admin must include the ${heading} section`);
 }
+assert.match(html, /grid-template-columns:240px minmax\(0,1fr\)/, 'Desktop admin must have a persistent left sidebar');
+assert.match(html, /data-testid="admin-primary-scroll"/, 'Admin must expose one stable primary scroll region');
+for (const nav of ['overview','users','reports','agencies','vehicles','speed-limits','sync-health']) {
+  assert.match(html, new RegExp(`data-testid="nav-admin-${nav}"`), `Admin navigation must include ${nav}`);
+}
+for (const mode of ['car','bus','lorry','motorbike']) {
+  assert.match(html, new RegExp(`vehicle-section-\\$\\{mode\\}`), 'Vehicle sections must be generated for all supported modes');
+}
+assert.match(html, /data-testid="button-export-agency-pdf"/, 'Agency PDF export must have a stable hook');
+assert.match(html, /author:'Perplexity Computer'/, 'PDF metadata must identify Perplexity Computer');
+assert.match(html, /vendor\/jspdf\.umd\.min\.js/, 'PDF generation must use a local jsPDF bundle');
+assert.match(html, /data-testid="button-share-agency-report"/, 'Public report sharing must have a stable hook');
+assert.match(html, /#\/reports\/\$\{encodeURIComponent\(slug\)\}/, 'Public reports must use canonical hash routes');
+assert.match(html, /function parseAppHash\(\)/, 'Canonical hash routing must parse deep links without clearing sessions');
+assert.doesNotMatch(html, /window\.location\.pathname\+window\.location\.search/, 'Deep-link handling must not strip a valid route');
 assert.match(html, /src="web-repository\.js"/, 'The shared repository module must load before the app');
 assert.match(html, /endpoint:APP_API_URL\?`\$\{APP_API_URL\}\/api\/sync`:'\/api\/sync'/, 'The client must use the configured durable API with same-origin proxy fallback');
 assert.match(html, /tokenProvider:\(\)=>getAASession\(\)\?\.token\|\|null/, 'Sync must authenticate with the opaque user token');

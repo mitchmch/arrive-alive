@@ -1,0 +1,45 @@
+Arrive Alive web administration implementation
+Date: 2026-08-26
+
+Implemented:
+- Canonical #/admin routing with legacy #admin normalization, session-preserving
+  authenticated deep links, and administrator login gating.
+- Responsive light-only administration shell with persistent desktop sidebar,
+  compact mobile section selector, and one primary vertical scroll region.
+- Five repository-derived KPI cards.
+- Car, bus, lorry, and motorbike metrics and record sections.
+- Agency selection, trusted-status controls, vehicle breakdown, journey and
+  violation report data.
+- Locally vendored jsPDF export with branding, metadata, pagination, metrics,
+  vehicle breakdown, journey table, and violation table.
+- Sanitized Supabase public report migration and Edge routes, canonical public
+  report view, copy/email/WhatsApp/native share controls.
+- Stable test IDs, static/backend contracts, and responsive browser test cases.
+
+Validation passed:
+- Extracted inline JavaScript: node --check
+- web-repository.js: node --check
+- api/sync.js: node --check
+- tests/static-web-check.js
+- tests/backend-contract-check.js
+- tests/repository-check.js
+- tests/sync-api-check.js
+- Supabase Edge Function TypeScript bundle parse via esbuild
+- git diff --check for the web/backend change set
+
+Environment limitation:
+- Browser QA was attempted but could not execute. No Chromium binary is
+  installed, and Playwright reports that it does not provide Chromium for
+  ubuntu26.04-x64. The responsive browser test suite is implemented in
+  tests/browser-qa.js and should be run in CI or a supported local environment.
+- Deno is unavailable, so the existing Deno helper test could not run.
+
+Deployment required for durable public links:
+1. Apply supabase/migrations/20260826213000_public_agency_reports.sql.
+2. Deploy supabase/functions/app-api.
+3. Keep SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY configured.
+4. Ensure APP_ALLOWED_ORIGINS contains https://cp.arrivealive.app.
+5. Verify authenticated POST /api/public-reports and public
+   GET /api/public-reports/:slug.
+
+No external deployment was performed.

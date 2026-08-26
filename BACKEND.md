@@ -54,9 +54,9 @@ Profile photos are private, limited to JPEG/PNG/WebP and 2 MB, stored under a pe
 
 ## Main routes
 
-Public before custom session authentication: `GET /health`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/reset-pin`.
+Public before custom session authentication: `GET /health`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/reset-pin`, and read-only `GET /api/public-reports/:slug`.
 
-Authenticated: profile/logout, `/api/sync`, journeys, incidents/confirmation, violations, agencies, and speed limits. Administrative: users, stats/overview, violation moderation/reports, speed-limit settings, and `/api/admin/sync-health`. Ownership is enforced on personal journeys and violations. Public-looking data routes still require a valid app session to limit anonymous bulk access.
+Authenticated: profile/logout, `/api/sync`, journeys, incidents/confirmation, violations, agencies, and speed limits. Administrative: users, stats/overview, violation moderation/reports, speed-limit settings, public report publishing, and `/api/admin/sync-health`. Ownership is enforced on personal journeys and violations. Apart from a single slug-addressed sanitized snapshot, public-looking data routes still require a valid app session to limit anonymous bulk access.
 
 ## Local checks
 
@@ -73,3 +73,25 @@ flutter test flutter_app
 ```
 
 The final three commands require Flutter/Dart to be installed. Full Edge type-checking also requires resolving the pinned npm Supabase client import; avoid doing that in an offline/no-network review environment.
+
+## Public agency report deployment
+
+Agency sharing publishes an immutable, sanitized snapshot to
+`public.public_agency_reports`. The payload contains agency identity, aggregate
+safety metrics, vehicle-type breakdowns, and report rows. It excludes user
+phones, PINs, session tokens, profiles, driver names, and precise journey
+coordinates.
+
+Operator steps:
+
+1. Apply `supabase/migrations/20260826213000_public_agency_reports.sql`.
+2. Deploy the updated `supabase/functions/app-api` Edge Function.
+3. Keep `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` configured and ensure
+   `APP_ALLOWED_ORIGINS` includes `https://cp.arrivealive.app`.
+4. Confirm the `arrive-alive-api-url` meta value points to this function.
+5. Verify an administrator can `POST /api/public-reports` with a bearer token
+   and an unauthenticated visitor can `GET /api/public-reports/:slug`.
+
+No external deployment was performed. Until the migration and Edge Function
+are deployed together, publishing fails visibly and the client does not create
+a misleading local-only public URL.

@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const migration = fs.readFileSync(path.join(root, 'supabase/migrations/20260826190000_durable_backend.sql'), 'utf8');
+const publicReportsMigration = fs.readFileSync(path.join(root, 'supabase/migrations/20260826213000_public_agency_reports.sql'), 'utf8');
 const edge = fs.readFileSync(path.join(root, 'supabase/functions/app-api/index.ts'), 'utf8');
 const helpers = fs.readFileSync(path.join(root, 'supabase/functions/app-api/helpers.ts'), 'utf8');
 const flutterApi = fs.readFileSync(path.join(root, 'flutter_app/lib/services/api_service.dart'), 'utf8');
@@ -22,6 +23,12 @@ assert.match(edge, /https:\/\/cp\.arrivealive\.app/);
 for (const route of ['/api/auth/register','/api/auth/login','/api/auth/reset-pin','/api/profile','/api/sync','/api/stats','/api/users','/api/admin/sync-health']) {
   assert.ok(edge.includes(route), `Edge API route missing: ${route}`);
 }
+assert.match(publicReportsMigration, /create table public\.public_agency_reports/);
+assert.match(publicReportsMigration, /alter table public\.public_agency_reports enable row level security/);
+assert.match(publicReportsMigration, /revoke all on public\.public_agency_reports from anon, authenticated/);
+assert.match(edge, /publicReportSnapshot/);
+assert.match(edge, /\/api\/public-reports/);
+assert.match(edge, /admin\(identity\).*publicReportSnapshot/s, 'Publishing must require an administrator');
 assert.match(flutterApi, /'Authorization': 'Bearer \$token'/);
 assert.match(webRepository, /'Authorization': `Bearer \$\{tokenProvider\(\)\}`/);
 assert.doesNotMatch(edge, /service_role\s*[:=]\s*['"][A-Za-z0-9]/i);

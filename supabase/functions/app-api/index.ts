@@ -111,6 +111,36 @@ function violationRow(body:Record<string,unknown>, userId:number) { return {stab
 function syncRecord(value:Record<string,unknown>):Record<string,unknown> {
   return {...value,remoteId:value.id,id:value.stableId??String(value.id)};
 }
+function publicReportSnapshot(input:unknown):Record<string,unknown> {
+  if(!input||typeof input!=='object'||Array.isArray(input))throw new ApiError(400,'snapshot object is required');
+  const source=input as Record<string,any>,agency=source.agency??{},metrics=source.metrics??{};
+  const modes=['car','bus','lorry','motorbike'];
+  const cleanText=(value:unknown,max=160)=>String(value??'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,max);
+  const cleanNumber=(value:unknown,min=0,max=100000)=>Math.max(min,Math.min(max,Number.isFinite(Number(value))?Number(value):0));
+  const breakdown=Array.isArray(source.vehicleBreakdown)?source.vehicleBreakdown.slice(0,4).map((item:any)=>({
+    mode:modes.includes(String(item?.mode))?String(item.mode):'car',
+    vehicles:cleanNumber(item?.vehicles),journeys:cleanNumber(item?.journeys),violations:cleanNumber(item?.violations),
+    maxSpeed:cleanNumber(item?.maxSpeed,0,400),averageSpeed:cleanNumber(item?.averageSpeed,0,400),speedLimit:cleanNumber(item?.speedLimit,0,300),
+  })):[];
+  const journeys=Array.isArray(source.journeys)?source.journeys.slice(0,100).map((item:any)=>({
+    id:cleanText(item?.id,100),mode:modes.includes(String(item?.mode))?String(item.mode):'car',
+    endedAt:item?.endedAt?cleanText(item.endedAt,40):null,distanceKm:cleanNumber(item?.distanceKm,0,100000),
+    maxSpeed:cleanNumber(item?.maxSpeed,0,400),averageSpeed:cleanNumber(item?.averageSpeed,0,400),violations:cleanNumber(item?.violations),
+  })):[];
+  const violations=Array.isArray(source.violations)?source.violations.slice(0,100).map((item:any)=>({
+    mode:modes.includes(String(item?.mode))?String(item.mode):'car',plate:cleanText(item?.plate,32),
+    speed:cleanNumber(item?.speed,0,400),limit:cleanNumber(item?.limit,0,300),route:cleanText(item?.route,160),time:cleanText(item?.time,80),
+  })):[];
+  const safe={
+    reportVersion:1,generatedAt:new Date().toISOString(),
+    agency:{id:cleanText(agency.id,100),name:cleanText(agency.name,120),region:cleanText(agency.region,120),safetyScore:cleanNumber(agency.safetyScore,0,100),trusted:Boolean(agency.trusted)},
+    metrics:{vehicles:cleanNumber(metrics.vehicles),journeys:cleanNumber(metrics.journeys),violations:cleanNumber(metrics.violations),safetyScore:cleanNumber(metrics.safetyScore,0,100)},
+    vehicleBreakdown:breakdown,journeys,violations,
+  };
+  if(!safe.agency.id||safe.agency.name.length<2)throw new ApiError(400,'A valid agency is required');
+  if(JSON.stringify(safe).length>500000)throw new ApiError(413,'Public report snapshot is too large');
+  return safe;
+}
 async function upsertOwned(table:string, row:Record<string,unknown>, ownerColumn:string, ownerId:number) {
   const {data:existing,error:readError}=await db.from(table).select(`id,${ownerColumn},version,client_updated_at`).eq('stable_id',row.stable_id).maybeSingle();
   ensure(existing,readError);
@@ -146,6 +176,12 @@ async function handle(req:Request):Promise<Response> {
   if(req.method==='OPTIONS'){const origin=req.headers.get('origin')??''; if(origin&&!ALLOWED_ORIGINS.includes(origin)) return json(req,{error:'Origin is not allowed'},403); return new Response(null,{status:204,headers:cors(req)});}
   const path=routePath(req.url), url=new URL(req.url), method=req.method;
   if(path==='/health'&&method==='GET') return json(req,{ok:true,contractVersion:CONTRACT_VERSION,persistence:{durable:true,adapter:'supabase-postgres'}});
+  const publicReportMatch=path.match(/^\/api\/public-reports\/([a-z0-9_-]{12,80})$/);
+  if(publicReportMatch&&method==='GET'){
+    const {data,error}=await db.from('public_agency_reports').select('slug,snapshot,created_at,expires_at').eq('slug',publicReportMatch[1]).is('revoked_at',null).maybeSingle();
+    if(error||!data||(data.expires_at&&Date.parse(data.expires_at)<=Date.now()))throw new ApiError(404,'Public report not found','not_found');
+    return json(req,{slug:data.slug,snapshot:data.snapshot,createdAt:data.created_at,expiresAt:data.expires_at});
+  }
   if(path==='/api/auth/register'&&method==='POST'){
     const body=await bodyJson(req),phone=normalizePhone(body.phone),pin=requireString(body.pin,'pin',4,12),secret=requireString(body.secretWord,'secretWord',3,100),birth=optionalNumber(body.birthYear,'birthYear',1900,new Date().getUTCFullYear());
     const pinSalt=randomToken(16),secretSalt=randomToken(16),iterations=210000;
@@ -166,6 +202,12 @@ async function handle(req:Request):Promise<Response> {
     const salt=randomToken(16); ensure(null,(await db.from('users').update({pin_salt:salt,pin_hash:await deriveSecret(newPin,salt,data.hash_iterations)}).eq('id',data.id)).error); await db.from('app_sessions').update({revoked_at:new Date().toISOString()}).eq('user_id',data.id); await audit({user:data as AppUser,sessionId:''},'reset_pin','user',data.id); return json(req,{ok:true});
   }
   const identity=await authenticate(req,true) as Identity;
+  if(path==='/api/public-reports'&&method==='POST'){
+    admin(identity);const body=await bodyJson(req),safe=publicReportSnapshot(body.snapshot),slug=randomToken(18).toLowerCase();
+    const {data,error}=await db.from('public_agency_reports').insert({slug,agency_stable_id:(safe.agency as any).id,snapshot:safe,created_by:identity.user.id}).select('slug,created_at').single();
+    await audit(identity,'publish','public_agency_report',(safe.agency as any).id,{slug});
+    const created=ensure(data,error);return json(req,{slug:created.slug,createdAt:created.created_at},201);
+  }
   if(path==='/api/auth/logout'&&method==='POST'){await db.from('app_sessions').update({revoked_at:new Date().toISOString()}).eq('id',identity.sessionId);return json(req,{ok:true});}
   if(path==='/api/profile'&&method==='GET') return json(req,profile(identity.user as unknown as Record<string,unknown>));
   if(path==='/api/profile'&&method==='PATCH'){const body=await bodyJson(req),update:any={};if(body.displayName!==undefined)update.display_name=requireString(body.displayName,'displayName',2,80);if(body.phone!==undefined)update.phone=normalizePhone(body.phone);const {data,error}=await db.from('users').update(update).eq('id',identity.user.id).select('id,phone,display_name,birth_year,role,photo_path').single();if(error?.code==='23505')throw new ApiError(409,'Phone already in use');await audit(identity,'update','profile',identity.user.id);return json(req,profile(ensure(data,error)));}
