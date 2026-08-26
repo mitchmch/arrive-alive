@@ -28,6 +28,12 @@ class ApiService {
     }
   }
 
+  static Future<bool> hasSessionToken() async {
+    final token =
+        (await SharedPreferences.getInstance()).getString(_tokenKey) ?? '';
+    return token.isNotEmpty;
+  }
+
   static void _requireBackend() {
     if (!AppConfig.hasBackend) {
       throw const BackendUnavailableException();

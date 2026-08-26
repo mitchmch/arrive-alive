@@ -29,16 +29,69 @@
     };
   }
 
+  function normaliseMode(mode) {
+    const value = String(mode || '').trim().toLowerCase();
+    if (value === 'bike' || value === 'motorcycle') return 'motorbike';
+    return value;
+  }
+
+  function canonicalizeRecord(record, collection) {
+    const value = {...(record || {})};
+    if (value.id != null) value.id = String(value.id);
+
+    if (collection === 'users') {
+      value.phone = String(value.phone || '').trim();
+      value.name = String(value.name || value.displayName || value.phone || '').trim();
+      value.displayName = value.name;
+    } else if (collection === 'agencies') {
+      const score = Number(value.score ?? value.safetyScore ?? value.safety_score ?? 0);
+      const violations = Number(
+        value.violations ?? value.violationCount ?? value.violation_count ?? 0,
+      );
+      value.score = Number.isFinite(score) ? score : 0;
+      value.safetyScore = value.score;
+      value.violations = Number.isFinite(violations) ? violations : 0;
+      value.violationCount = value.violations;
+      value.verified = Boolean(value.verified ?? value.trusted ?? value.score === 100);
+    } else if (collection === 'speedLimits') {
+      value.mode = normaliseMode(value.mode ?? value.vehicle_type);
+      const limit = Number(value.limit ?? value.limitKph ?? value.limit_kmh);
+      if (Number.isFinite(limit)) {
+        value.limit = limit;
+        value.limitKph = limit;
+        value.limit_kmh = limit;
+      }
+      value.vehicle_type = value.mode;
+    }
+    return value;
+  }
+
+  function recordKey(record, collection) {
+    const value = canonicalizeRecord(record, collection);
+    if (collection === 'users' && value.phone) return `phone:${value.phone}`;
+    if (collection === 'profiles') {
+      const owner = value.ownerId || value.userId || value.phone;
+      if (owner) return `owner:${String(owner)}`;
+    }
+    if (collection === 'speedLimits' && value.mode) return `mode:${value.mode}`;
+    if (collection === 'agencies') {
+      const agency = value.stableId || value.stable_id || value.id || value.name;
+      if (agency) return `agency:${String(agency).toLowerCase()}`;
+    }
+    return `id:${String(value.stableId || value.stable_id || value.id || '')}`;
+  }
+
   function normaliseRecord(record, collection, previous) {
-    const timestamp = record.updatedAt || nowIso();
-    return {
+    const canonical = canonicalizeRecord(record, collection);
+    const timestamp = canonical.updatedAt || nowIso();
+    return canonicalizeRecord({
       ...(previous || {}),
-      ...record,
-      id: String(record.id || previous?.id || makeId(collection.slice(0, 3))),
-      version: Math.max(Number(record.version) || 0, Number(previous?.version) || 0) + 1,
-      createdAt: record.createdAt || previous?.createdAt || timestamp,
+      ...canonical,
+      id: String(previous?.id || canonical.id || makeId(collection.slice(0, 3))),
+      version: Math.max(Number(canonical.version) || 0, Number(previous?.version) || 0) + 1,
+      createdAt: canonical.createdAt || previous?.createdAt || timestamp,
       updatedAt: timestamp,
-    };
+    }, collection);
   }
 
   function winner(local, incoming) {
@@ -54,9 +107,14 @@
     const merged = emptySnapshot();
     for (const collection of COLLECTIONS) {
       const records = new Map();
-      for (const record of base?.collections?.[collection] || []) records.set(record.id, record);
-      for (const record of incoming?.collections?.[collection] || []) {
-        records.set(record.id, winner(records.get(record.id), record));
+      for (const source of base?.collections?.[collection] || []) {
+        const record = canonicalizeRecord(source, collection);
+        records.set(recordKey(record, collection), record);
+      }
+      for (const source of incoming?.collections?.[collection] || []) {
+        const record = canonicalizeRecord(source, collection);
+        const key = recordKey(record, collection);
+        records.set(key, canonicalizeRecord(winner(records.get(key), record), collection));
       }
       merged.collections[collection] = [...records.values()];
     }
@@ -119,7 +177,8 @@
     function upsert(collection, record) {
       if (!COLLECTIONS.includes(collection)) throw new Error(`Unknown collection: ${collection}`);
       const items = snapshot.collections[collection];
-      const index = items.findIndex(item => item.id === record.id);
+      const key = recordKey(record, collection);
+      const index = items.findIndex(item => recordKey(item, collection) === key);
       const next = normaliseRecord(record, collection, index >= 0 ? items[index] : null);
       if (index >= 0) items[index] = next;
       else items.push(next);
@@ -191,5 +250,14 @@
     };
   }
 
-  return {COLLECTIONS, SCHEMA_VERSION, emptySnapshot, mergeSnapshots, normaliseRecord, createRepository};
+  return {
+    COLLECTIONS,
+    SCHEMA_VERSION,
+    emptySnapshot,
+    mergeSnapshots,
+    normaliseRecord,
+    canonicalizeRecord,
+    recordKey,
+    createRepository,
+  };
 });

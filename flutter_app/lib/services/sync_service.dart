@@ -40,12 +40,18 @@ class SyncService {
     _connectivity.init();
     _connectivitySub = _connectivity.onConnectivityChanged.listen((isOnline) {
       if (isOnline) {
-        syncAll();
+        ApiService.hasSessionToken().then((hasToken) {
+          if (hasToken) syncAll();
+        });
       }
     });
     // Attempt initial sync if already online
     _connectivity.checkOnline().then((online) {
-      if (online) syncAll();
+      if (online) {
+        ApiService.hasSessionToken().then((hasToken) {
+          if (hasToken) syncAll();
+        });
+      }
     });
   }
 
@@ -344,6 +350,11 @@ class SyncService {
     if (!AppConfig.hasBackend) {
       _lastError = 'API_BASE_URL is not configured';
       _syncStatusController.add(SyncStatus.unavailable);
+      return;
+    }
+    if (!await ApiService.hasSessionToken()) {
+      _lastError = null;
+      _syncStatusController.add(SyncStatus.idle);
       return;
     }
     if (!await _connectivity.checkOnline()) return;

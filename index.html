@@ -1754,11 +1754,17 @@ let aaSession=(()=>{try{return JSON.parse(window.sessionStorage.getItem(SESSION_
 let syncTimer=null;
 function queueSync(){
   clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>aaRepository.sync(getAASession()?.role||'user').then(renderSyncHealth),350);
+  syncTimer=setTimeout(async()=>{
+    if(!getAASession()?.token&&APP_API_URL)return;
+    await aaRepository.sync(getAASession()?.role||'user');
+    hydrateRepositoryData();
+    renderSyncHealth();
+  },350);
 }
 async function runSync(){
   renderSyncHealth({...aaRepository.getStatus(),state:'syncing',message:'Checking the sync API…'});
   await aaRepository.sync(getAASession()?.role||'user');
+  hydrateRepositoryData();
   renderAdmin();
 }
 function renderSyncHealth(status=aaRepository.getStatus()){
@@ -1862,6 +1868,8 @@ async function doLogin(){
       const user=await callAppApi('/api/auth/login',{method:'POST',body:{phone,pin}});
       setAASession({id:user.id,name:user.displayName||user.phone,phone:user.phone,role:user.role||'user',token:user.token});
       aaRepository.upsert('users',{id:`user-${user.id}`,name:user.displayName||user.phone,phone:user.phone,role:user.role||'user',status:'active'});
+      await aaRepository.sync(user.role||'user');
+      hydrateRepositoryData();
     }else{
       const users=getAAUsers();const user=users[phone];
       if(!user)throw new Error('No account found with this phone number. Please register first.');
@@ -2181,15 +2189,20 @@ let aaSpeedLimits={};
 function getAdminSpeedLimits(){
   return aaSpeedLimits;
 }
+function speedLimitModeKey(mode){
+  return mode==='bike'||mode==='motorcycle'?'motorbike':mode;
+}
 function getAdminSpeedLimit(mode){
   const limits=getAdminSpeedLimits();
-  if(limits[mode])return limits[mode];
+  const key=speedLimitModeKey(mode);
+  if(limits[key])return limits[key];
   return DEFAULT_SPEED_LIMIT;
 }
 function setAdminSpeedLimit(mode,limit){
   const limits=getAdminSpeedLimits();
-  limits[mode]=parseInt(limit);aaSpeedLimits=limits;
-  aaRepository.upsert('speedLimits',{id:`limit-${mode}`,mode,limit:limits[mode]});
+  const key=speedLimitModeKey(mode);
+  limits[key]=parseInt(limit);aaSpeedLimits=limits;
+  aaRepository.upsert('speedLimits',{id:`limit-${key}`,mode:key,limit:limits[key]});
   queueSync();
 }
 function resetAdminSpeedLimits(){
@@ -3698,8 +3711,8 @@ function addAgency(){
   $('adminAgencyName').value='';queueSync();renderAdmin();showToast('Agency added');
 }
 function hydrateRepositoryData(){
-  const publicUserIds=new Set(aaRepository.list('users').map(user=>user.id));
-  Object.values(getAAUsers()).filter(user=>!publicUserIds.has(`user-${user.phone}`)).forEach(user=>aaRepository.upsert('users',{
+  const publicUserPhones=new Set(aaRepository.list('users').map(user=>user.phone));
+  Object.values(getAAUsers()).filter(user=>!publicUserPhones.has(user.phone)).forEach(user=>aaRepository.upsert('users',{
     id:`user-${user.phone}`,name:user.name,phone:user.phone,role:user.role||'user',
     status:user.status||'active',createdAt:new Date(user.createdAt||Date.now()).toISOString()
   }));
@@ -3849,7 +3862,9 @@ function submitReport(){
 /* Init */
 window.addEventListener('load',()=>{
   hydrateRepositoryData();
-  aaRepository.sync(getAASession()?.role||'user').then(()=>{hydrateRepositoryData();renderSyncHealth();});
+  if(getAASession()?.token){
+    aaRepository.sync(getAASession().role||'user').then(()=>{hydrateRepositoryData();renderSyncHealth();});
+  }else renderSyncHealth();
   loadMapboxConfig();
   if(window.speechSynthesis)window.speechSynthesis.getVoices();
   const hash=window.location.hash.toLowerCase();

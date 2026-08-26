@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/sync_service.dart';
 
 class AuthState {
   final AppUser? user;
@@ -29,6 +30,7 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(user: user);
     if (user != null && !user.isGuest) {
       await AuthService.retryPendingProfileUpdate(user: user);
+      await SyncService().syncAll();
     }
   }
 
@@ -58,6 +60,7 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final user = await AuthService.login(phone, pin);
+      await SyncService().syncAll();
       state = state.copyWith(user: user, isLoading: false);
       return true;
     } catch (e) {

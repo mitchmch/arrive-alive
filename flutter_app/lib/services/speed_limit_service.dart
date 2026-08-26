@@ -10,6 +10,17 @@ import 'api_service.dart';
 class SpeedLimitService {
   static const String _cacheKey = 'aa_speed_limits_cache';
 
+  static String normalizeMode(String mode) {
+    final value = mode.trim().toLowerCase();
+    if (value == 'bike' || value == 'motorcycle') return 'motorbike';
+    return value;
+  }
+
+  static double? _number(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse('$value');
+  }
+
   /// Fetch speed limits from backend, cache locally for offline use.
   /// Returns a map of vehicle_type -> limit_kmh.
   static Future<Map<String, double>> fetchSpeedLimits() async {
@@ -18,15 +29,19 @@ class SpeedLimitService {
       final limits = <String, double>{};
       if (data is Map) {
         for (final entry in data.entries) {
-          limits[entry.key as String] = (entry.value as num).toDouble();
+          final limit = _number(entry.value);
+          if (limit != null) {
+            limits[normalizeMode(entry.key.toString())] = limit;
+          }
         }
       } else if (data is List) {
         for (final item in data) {
           if (item is Map) {
-            final type = item['vehicle_type'] as String?;
-            final limit = item['limit_kmh'];
+            final type = item['mode'] ?? item['vehicle_type'];
+            final limit =
+                _number(item['limitKph'] ?? item['limit_kmh'] ?? item['limit']);
             if (type != null && limit != null) {
-              limits[type] = (limit as num).toDouble();
+              limits[normalizeMode(type.toString())] = limit;
             }
           }
         }
@@ -44,14 +59,18 @@ class SpeedLimitService {
   /// Get speed limit for a vehicle mode, falling back to default 70.
   static Future<double> getLimitForMode(String mode) async {
     final limits = await fetchSpeedLimits();
-    if (limits.containsKey(mode)) return limits[mode]!;
+    final key = normalizeMode(mode);
+    if (limits.containsKey(key)) return limits[key]!;
     return AppConfig.defaultSpeedLimit;
   }
 
   /// Admin: update speed limit for a vehicle type via backend.
   static Future<void> updateSpeedLimit(String mode, double limit) async {
+    final key = normalizeMode(mode);
     await ApiService.post('/api/admin/speed-limits', {
-      'vehicle_type': mode,
+      'mode': key,
+      'vehicle_type': key,
+      'limit': limit,
       'limit_kmh': limit,
     });
     // Refresh cache
@@ -65,7 +84,9 @@ class SpeedLimitService {
       final cached = prefs.getString(_cacheKey);
       if (cached != null) {
         final decoded = jsonDecode(cached) as Map<String, dynamic>;
-        return decoded.map((k, v) => MapEntry(k, (v as num).toDouble()));
+        return decoded.map(
+          (k, v) => MapEntry(normalizeMode(k), _number(v) ?? 0),
+        );
       }
     } catch (_) {}
     // Fall back to config defaults
