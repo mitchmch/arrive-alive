@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
 <!-- MapLibre GL JS: tokenless vector maps with broad mobile-browser support -->
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous"/>
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="vendor/maplibre-gl.css"/>
+<script src="vendor/maplibre-gl.js"></script>
 <style>
 /* ===== DESIGN TOKENS ===== */
 :root, [data-theme="light"]{
@@ -899,6 +899,51 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   .access-panel{border-radius:24px 24px 0 0;margin-top:-22px;position:relative;z-index:2}
 }
 
+/* ===== REFINED JOURNEY DOCK ===== */
+.bottom-sheet{
+  border:1px solid var(--aa-divider);border-bottom:0;
+  border-radius:24px 24px 0 0;box-shadow:0 -8px 28px rgba(20,31,52,.12);
+  padding:8px 0 max(10px,env(safe-area-inset-bottom,0px));
+}
+.journey-dock-head{height:30px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.journey-state{min-width:0;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--aa-text-muted)}
+.journey-state::before{content:"";width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:#9aa3b2}
+.journey-state.monitoring::before{background:var(--aa-blue);box-shadow:0 0 0 4px rgba(67,97,238,.12)}
+.journey-state.moving::before{background:var(--aa-success);box-shadow:0 0 0 4px rgba(76,175,80,.12)}
+.journey-state.over-limit::before{background:var(--aa-destructive);box-shadow:0 0 0 4px rgba(221,45,74,.12)}
+.dock-details{min-height:30px;padding:0 4px;color:var(--aa-blue);font-size:12px;font-weight:800}
+.sheet-compact{display:grid;grid-template-columns:82px minmax(0,1fr) 108px;align-items:center;gap:12px;padding:4px 14px 2px}
+.sheet-speedo{min-width:0;padding:0;border:0;align-items:flex-start}
+.sheet-speedo .num{font-size:38px;letter-spacing:-1.5px}
+.sheet-speedo .unit{font-size:10px}
+.sheet-stats-mini{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:0;border-left:1px solid var(--aa-divider)}
+.sheet-stats-mini .stat-mini{padding:2px 6px}
+.sheet-stats-mini .stat-mini:nth-child(3),.sheet-stats-mini .stat-mini:nth-child(4){display:none}
+.stat-mini .v{font-size:13px}
+.stat-mini .l{font-size:10px;letter-spacing:0;text-transform:none}
+.sheet-record{width:108px;height:52px;justify-content:center;border-radius:14px;background:#17315e;box-shadow:none}
+.sheet-record.recording{background:#fff;color:var(--aa-destructive);border:1.5px solid var(--aa-destructive);box-shadow:none}
+.sheet-record.recording .dot{background:var(--aa-destructive)}
+
+@media(max-width:767px) and (orientation:portrait){
+  .sheet-compact{grid-template-areas:none}
+  .sheet-speedo,.sheet-stats-mini,.sheet-record{grid-area:auto}
+}
+
+@media(max-width:359px){
+  .sheet-compact{grid-template-columns:66px minmax(0,1fr);grid-template-areas:"speed stats" "record record";gap:8px 10px}
+  .sheet-speedo{grid-area:speed}
+  .sheet-stats-mini{grid-area:stats;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sheet-record{grid-area:record;width:100%;height:46px}
+}
+
+@media(max-height:560px) and (orientation:landscape){
+  .bottom-sheet{padding-top:5px}
+  .journey-dock-head{height:24px}
+  .sheet-compact{grid-template-columns:82px minmax(0,1fr) 108px;padding-top:0}
+  .sheet-record{height:46px}
+}
+
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
@@ -1131,8 +1176,11 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 
       <!-- Unified bottom panel (nav + stats) — modern professional UI -->
       <div class="bottom-sheet" id="bottomSheet">
-        <button type="button" class="sheet-handle" onclick="toggleSheet()" aria-label="Expand or collapse journey details" data-testid="button-toggle-journey-details"></button>
-        <div style="padding:0 16px">
+        <div class="journey-dock-head">
+          <div class="journey-state" id="journeyState"><span id="sheetMotionStatus">Ready to record</span></div>
+          <button type="button" class="dock-details" onclick="toggleSheet()" aria-label="Expand or collapse journey details" data-testid="button-toggle-journey-details">Details</button>
+        </div>
+        <div style="padding:0 10px">
         <!-- Nav instruction row (shows when navigating) -->
         <div class="nav-row" id="navRow">
           <div class="nav-maneuver-icon" id="navManeuverIcon">
@@ -1152,7 +1200,6 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
           <div class="sheet-speedo" id="digitalSpeedometer" aria-live="polite" data-testid="digital-speedometer">
             <span class="num" id="sheetSpeed">0</span>
             <span class="unit">km/h</span>
-            <span class="motion" id="sheetMotionStatus">Stationary</span>
           </div>
           <div class="sheet-stats-mini">
             <div class="stat-mini"><span class="v" id="statDist">0.0 km</span><span class="l">Distance</span></div>
@@ -1604,10 +1651,12 @@ function finishWizard(){startJourney();}
    MAP (MapLibre GL JS / Mapbox GL JS)
    ============================================================ */
 let map=null,userMarker=null,hazardMarkers=new Map(),routeSource=null,routeLayer=null,reportPinMarker=null;
+let mapStartupTimer=null;
 let posIdx=0,routePts=[],routeTotalKm=0;
 let curPos={lat:3.8480,lng:11.5021};
 let liveSpeed=0,recordingTimer=null,geoWatchId=null,lastGeoFix=null,recordingStartedAt=0;
 let journeyActive=false,recording=false,violations=0,maxSpeed=0,distKm=0,durSec=0,avgSum=0,avgCount=0;
+let selectedDestination=null,hasMovedDuringJourney=false;
 let wasViolating=false;
 let userHeading=0;
 let speedSamples=[],lastJourneyReport=null;
@@ -1746,6 +1795,10 @@ function initMap(){
     return;
   }
   setMapState('loading');
+  if(typeof maplibregl==='undefined'){
+    setMapState('error','Map could not start','Reload the app to restore the bundled map engine.');
+    return;
+  }
   const styleConfig=getMapStyle();
   const mapOptions={
     container:'map',
@@ -1758,15 +1811,31 @@ function initMap(){
   };
   updateMapNotice();
 
-  map=new maplibregl.Map(mapOptions);
+  try{
+    map=new maplibregl.Map(mapOptions);
+  }catch(error){
+    console.warn('Map initialization failed:',error);
+    setMapState('error','Map could not start','Tap Retry to load the map again.');
+    return;
+  }
+
+  clearTimeout(mapStartupTimer);
+  mapStartupTimer=setTimeout(()=>{
+    if(map&&!map.loaded())setMapState('error','Map is taking too long','Check your connection, then tap Retry.');
+  },12000);
 
   map.on('load',()=>{
+    clearTimeout(mapStartupTimer);
     routePts=ROUTE.map(p=>({lat:p[0],lng:p[1]}));
     restoreMapOperationalLayersWhenReady();
     setMapState('ready');
     requestMapResize();
   });
-  map.on('style.load',restoreMapOperationalLayersWhenReady);
+  map.on('style.load',()=>{
+    restoreMapOperationalLayersWhenReady();
+    setMapState('ready');
+    requestMapResize();
+  });
 
   // Add user position marker (custom pulsing dot)
   const userEl=document.createElement('div');
@@ -1814,6 +1883,7 @@ function requestMapResize(){
 }
 
 function retryMap(){
+  clearTimeout(mapStartupTimer);
   if(map){
     map.remove();
     map=null;
@@ -1865,6 +1935,7 @@ function startJourney(){
   initMap();
   stopMotionTracking();
   journeyActive=false;recording=false;posIdx=0;window._arrived=false;
+  selectedDestination=null;hasMovedDuringJourney=false;
   warnedHazardIds=new Set();hideHazardAlert();
   curPos={lat:routePts[0].lat,lng:routePts[0].lng};
   violations=0;maxSpeed=0;distKm=0;durSec=0;avgSum=0;avgCount=0;liveSpeed=0;wasViolating=false;
@@ -1965,18 +2036,28 @@ function updateLiveNavigation(){
     $('navManeuverIcon').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MANEUVER_SVG[st.maneuver]}</svg>`;
     $('streetName').textContent=st.street;
     $('nextTurnText').textContent=st.dist;
-    if(st.maneuver==='arrive')speak('You have arrived at your destination.');
-    else speak(st.dist+', '+st.street);
+    if(st.maneuver==='arrive'){
+      if(canCompleteJourney())speak('You have arrived at your destination.');
+    }else{
+      speak(st.dist+', '+st.street);
+    }
   }
   const remainKm=remainingRouteKm(Math.floor(posIdx));
   const remainMin=Math.round(remainKm/Math.max(20,liveSpeed)*60);
   $('navEta').textContent=remainMin+' min';
   $('navRemain').textContent=remainKm.toFixed(1)+' km';
-  if(remainKm<=0.05&&distKm>=0.1&&!window._arrived){
+  if(remainKm<=0.05&&canCompleteJourney()&&!window._arrived){
     window._arrived=true;
     speak('You have arrived. Journey complete.');
     endJourney('Journey complete');
   }
+}
+
+function canCompleteJourney(){
+  if(!recording||!journeyActive||!navActive||!selectedDestination||routePts.length<2)return false;
+  const progress=posIdx/(routePts.length-1);
+  const destinationDistance=distanceKm(curPos,selectedDestination);
+  return hasMovedDuringJourney&&durSec>=20&&distKm>=0.2&&progress>=0.97&&destinationDistance<=0.075;
 }
 
 function handleGpsPosition(position){
@@ -2006,6 +2087,7 @@ function handleGpsPosition(position){
     if(deltaKm<=plausibleKm)distKm+=deltaKm;
   }
   if(isMoving){
+    hasMovedDuringJourney=true;
     maxSpeed=Math.max(maxSpeed,liveSpeed);
     avgSum+=liveSpeed;avgCount++;
   }
@@ -2050,9 +2132,11 @@ function updateStats(){
   $('sheetSpeed').textContent=speed;
   const digital=$('digitalSpeedometer');
   const motionStatus=$('sheetMotionStatus');
+  const journeyState=$('journeyState');
   digital.classList.toggle('moving',isMoving);
   digital.classList.toggle('over-limit',isMoving&&effSpeed>journey.limit+2);
-  motionStatus.textContent=!recording?'Stationary':!isMoving?'Monitoring':effSpeed>journey.limit+2?'Over limit':'Moving';
+  journeyState.className='journey-state '+(!recording?'':!isMoving?'monitoring':effSpeed>journey.limit+2?'over-limit':'moving');
+  motionStatus.textContent=!recording?'Ready to record':!isMoving?'Waiting for movement':effSpeed>journey.limit+2?'Over speed limit':'Journey recording';
 
   $('statDist').textContent=distKm.toFixed(1)+' km';
   $('statDur').textContent=fmtDur(durSec);
@@ -2094,6 +2178,8 @@ function selectDestination(i){
   navActive=true;navStepIdx=-1;window._arrived=false;
   posIdx=0;distKm=0;durSec=0;
   const dest=CITIES[i];
+  selectedDestination={lat:dest.lat,lng:dest.lng,name:dest.name};
+  hasMovedDuringJourney=false;
   $('navRow').classList.add('show');
   $('bottomSheet').classList.add('nav-active');
   $('navManeuverIcon').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MANEUVER_SVG.straight}</svg>`;
@@ -2111,6 +2197,7 @@ function selectDestination(i){
 
 function stopNav(){
   navActive=false;
+  selectedDestination=null;
   $('navRow').classList.remove('show');
   $('bottomSheet').classList.remove('nav-active');
   if(map&&map.loaded()){
