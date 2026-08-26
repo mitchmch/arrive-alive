@@ -81,7 +81,7 @@ function choice(value:unknown, allowed:string[], fallback:string):string {
   return allowed.includes(candidate)?candidate:fallback;
 }
 
-async function writeOptionalSummary(facts:Record<string,unknown>, fallback:string):Promise<{text:string;status:'generated'|'fallback'|'failed'}> {
+async function writeOptionalSummary(facts:Record<string,unknown>, fallback:string):Promise<{text:string;status:'generated'|'fallback'|'failed';detail?:string}> {
   if(!OPENAI_API_KEY)return {text:fallback,status:'fallback'};
   const safeFacts=sanitizeSummaryFacts(facts);
   try{
@@ -90,7 +90,8 @@ async function writeOptionalSummary(facts:Record<string,unknown>, fallback:strin
       headers:{'Authorization':`Bearer ${OPENAI_API_KEY}`,'Content-Type':'application/json'},
       body:JSON.stringify({
         model:OPENAI_SUMMARY_MODEL,
-        max_output_tokens:180,
+        reasoning:{effort:'minimal'},
+        max_output_tokens:2000,
         input:[
           {role:'system',content:'Write one neutral road-safety summary using only the supplied aggregate facts. Never decide, revise, recommend, or infer trusted/avoid status. Repeat the supplied status exactly. Do not mention people, identity, protected attributes, precise locations, or speculate. Return JSON only.'},
           {role:'user',content:JSON.stringify(safeFacts)},
@@ -98,15 +99,19 @@ async function writeOptionalSummary(facts:Record<string,unknown>, fallback:strin
         text:{format:{type:'json_schema',name:'safety_summary',strict:true,schema:{type:'object',properties:{summary:{type:'string',maxLength:600}},required:['summary'],additionalProperties:false}}},
       }),
     });
-    if(!response.ok)throw new Error(`OpenAI returned ${response.status}`);
-    const payload=await response.json();
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok){
+      const issue=typeof payload?.error?.code==='string'?payload.error.code:typeof payload?.error?.type==='string'?payload.error.type:'request_failed';
+      throw new Error(`OpenAI ${response.status}: ${issue}`);
+    }
+    if(payload.status==='incomplete')throw new Error(`OpenAI incomplete: ${payload.incomplete_details?.reason??'unknown'}`);
     const raw=payload.output_text??payload.output?.flatMap((item:any)=>item.content??[]).find((item:any)=>item.type==='output_text')?.text;
     const parsed=JSON.parse(String(raw??'{}'));
     if(typeof parsed.summary!=='string'||!parsed.summary.trim())throw new Error('OpenAI response did not match schema');
     return {text:parsed.summary.trim().slice(0,600),status:'generated'};
   }catch(error){
     console.error('Optional summary generation failed',error);
-    return {text:fallback,status:'failed'};
+    return {text:fallback,status:'failed',detail:error instanceof Error?error.message.slice(0,240):'OpenAI request failed'};
   }
 }
 
@@ -330,6 +335,7 @@ async function handle(req:Request):Promise<Response> {
       model:OPENAI_SUMMARY_MODEL,
       status:summary.status,
       summary:summary.text,
+      detail:summary.detail??null,
       verificationOnly:true,
       persisted:false,
     });
