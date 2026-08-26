@@ -95,6 +95,8 @@ assert.match(html, /data-testid="admin-primary-scroll"/, 'Admin must expose one 
 for (const nav of ['overview','users','reports','agencies','vehicles','speed-limits','sync-health']) {
   assert.match(html, new RegExp(`data-testid="nav-admin-${nav}"`), `Admin navigation must include ${nav}`);
 }
+assert.match(html, /data-testid="button-admin-mobile-profile"/, 'Mobile admin navigation must expose Profile');
+assert.match(html, /data-testid="button-admin-mobile-sign-out"/, 'Mobile admin navigation must expose Sign out');
 for (const mode of ['car','bus','lorry','motorbike']) {
   assert.match(html, new RegExp(`vehicle-section-\\$\\{mode\\}`), 'Vehicle sections must be generated for all supported modes');
 }

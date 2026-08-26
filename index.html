@@ -700,6 +700,8 @@ ul{list-style:none}
   .admin-mobile-sections{display:flex;flex:0 0 auto;gap:6px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--aa-border);background:#fff;scrollbar-width:none}
   .admin-mobile-sections::-webkit-scrollbar{display:none}.admin-mobile-sections button{flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:8px;color:var(--aa-text-muted);font-size:12px;font-weight:700}
   .admin-mobile-sections button.active{background:#eef2ff;color:#3147c7}
+  .admin-mobile-sections button.mobile-account-action{color:#3147c7}
+  .admin-mobile-sections button.mobile-signout-action{color:var(--aa-destructive)}
   .admin-main{padding:16px 12px 36px}.admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .admin-section{padding:15px;margin-bottom:16px}.vehicle-grid{grid-template-columns:1fr}
   .agency-layout{grid-template-columns:1fr}.agency-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1601,6 +1603,8 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
           <button type="button" onclick="showAdminSection('adminVehiclesSection')" data-admin-section="adminVehiclesSection">Vehicles</button>
           <button type="button" onclick="showAdminSection('adminSpeedSection')" data-admin-section="adminSpeedSection">Limits</button>
           <button type="button" onclick="showAdminSection('adminSyncSection')" data-admin-section="adminSyncSection">Sync</button>
+          <button type="button" class="mobile-account-action" onclick="openProfile()" data-testid="button-admin-mobile-profile">Profile</button>
+          <button type="button" class="mobile-signout-action" onclick="doLogout()" data-testid="button-admin-mobile-sign-out">Sign out</button>
         </nav>
         <main class="admin-main" id="adminMain" data-testid="admin-primary-scroll">
           <div class="admin-content">
