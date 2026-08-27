@@ -31,15 +31,18 @@ void main() {
     await pump(violating: false, reported: false);
     await tester.tap(find.byKey(const Key('speed-breach-report-control')));
     expect(taps, 0);
-    expect(find.text('REPORT'), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('speed-breach-report-control'))),
+      const Size(40, 40),
+    );
 
     await pump(violating: true, reported: false);
     await tester.tap(find.byKey(const Key('speed-breach-report-control')));
     expect(taps, 1);
 
     await pump(violating: true, reported: true);
-    expect(find.text('REPORTED'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(find.byIcon(Icons.check), findsOneWidget);
     await tester.tap(find.byKey(const Key('speed-breach-report-control')));
     expect(taps, 1);
   });

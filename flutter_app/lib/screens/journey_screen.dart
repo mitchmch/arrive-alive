@@ -572,7 +572,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
             // journey's frozen limit, turns red during a breach, and displays
             // a durable reported state until speed returns below the limit.
             Positioned(
-              right: 16,
+              left: 12,
               bottom: nav.isNavigating ? 224 : 188,
               child: SafeArea(
                 top: false,
@@ -706,7 +706,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
             if (_showMap && _mapReady)
               Positioned(
                 left: 12,
-                bottom: nav.isNavigating ? 224 : 188,
+                bottom: nav.isNavigating ? 276 : 240,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: AppTheme.surface.withValues(alpha: 0.94),

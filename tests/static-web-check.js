@@ -143,6 +143,11 @@ assert.match(html, /\/api\/speed-reports/, 'Registered users must be able to sub
 assert.match(html, /src="web-voice\.js"/, 'Cloud voice must use the tested browser controller');
 assert.match(html, /src="web-speed-breach\.js"/, 'Speed breach state must use the tested controller');
 assert.match(html, /data-testid="button-report-speed-breach"/, 'The map must expose the automatic speed-breach report button');
+assert.match(html, /src="assets\/warning\.jpg"/, 'The speed-breach control must use the supplied warning icon');
+assert.match(html, /\.speed-breach-fab\{[\s\S]*?left:14px;right:auto;/, 'The speed-breach control must be positioned at the bottom left');
+assert.match(html, /\.speed-breach-fab\{[\s\S]*?width:48px;height:48px;/, 'The speed-breach control must match the other map controls');
+assert.match(html, /\.speed-breach-fab img\{[\s\S]*?filter:grayscale\(1\)/, 'The warning icon must be grey while inactive');
+assert.match(html, /\.speed-breach-fab\.is-breaching img\{filter:none;opacity:1\}/, 'The warning icon must use colour while active');
 assert.match(html, /speedBreachController\.update\(violating\)/, 'Live telemetry must drive the speed-breach control');
 assert.match(html, /speedBreachController\.reset\(\)/, 'Stopping a journey must reset the breach control and alarm');
 assert.match(html, /cannot create or change a violation by itself/, 'The report form must explain the telemetry safeguard');

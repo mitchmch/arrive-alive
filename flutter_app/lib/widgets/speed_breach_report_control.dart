@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme.dart';
-
 /// A deliberately prominent, one-tap control for reporting the current speed
 /// breach. Its icon and label communicate state without relying on colour.
 class SpeedBreachReportControl extends StatelessWidget {
@@ -33,34 +31,71 @@ class SpeedBreachReportControl extends StatelessWidget {
       child: Tooltip(
         message: label,
         child: Material(
-          color: isViolating ? AppTheme.destructive : Colors.grey.shade600,
+          color: Colors.white,
           elevation: isViolating ? 8 : 2,
           shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
             key: const Key('speed-breach-report-control'),
             customBorder: const CircleBorder(),
             onTap: enabled ? onReport : null,
             child: SizedBox(
-              width: 72,
-              height: 72,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              width: 40,
+              height: 40,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Icon(
-                    reported ? Icons.check_circle : Icons.speed,
-                    color: Colors.white,
-                    size: 27,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    reported ? 'REPORTED' : 'REPORT',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
+                  ColorFiltered(
+                    colorFilter: isViolating
+                        ? const ColorFilter.mode(
+                            Colors.transparent,
+                            BlendMode.dst,
+                          )
+                        : const ColorFilter.matrix(<double>[
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0.2126,
+                            0.7152,
+                            0.0722,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0.52,
+                            0,
+                          ]),
+                    child: Image.asset(
+                      'assets/images/warning.jpg',
+                      fit: BoxFit.cover,
                     ),
                   ),
+                  if (reported)
+                    const Align(
+                      alignment: Alignment.bottomRight,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Color(0xFF16794A),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(2),
+                          child: Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
