@@ -101,6 +101,13 @@ function publicHazard(row:Record<string,unknown>){
 }
 function formatAgency(row:Record<string,unknown>){const value=camel(row);return {...value,phone:value.contact??null,classification:value.safetyClassification??'unclassified',summaryText:value.summaryText??'',summarySource:value.summarySource??'human',violationCount:(value.metadata as any)?.violationCount??0,totalJourneys:(value.metadata as any)?.totalJourneys??0};}
 function formatSpeedLimit(row:Record<string,unknown>){const value=camel(row);return {...value,vehicle_type:value.mode,limit_kmh:value.limitKph};}
+function publicSpeedLimit(row:Record<string,unknown>){
+  const modes=['car','bus','lorry','motorbike'];
+  const mode=String(row.mode??'').trim().toLowerCase();
+  const limitKph=Math.round(Number(row.limit_kph));
+  if(!modes.includes(mode)||!Number.isFinite(limitKph)||limitKph<1||limitKph>300)return null;
+  return {mode,limitKph,updatedAt:row.updated_at??null};
+}
 function formatViolation(row:Record<string,unknown>){const value=camel(row);return {...value,lat:value.latitude??0,lng:value.longitude??0,timestamp:value.occurredAt,mode:(value.metadata as any)?.mode??'car',validated:value.status==='validated'?1:0,published:value.published?1:0,reportCount:value.sampleCount??(value.metadata as any)?.reportCount??1};}
 function formatSpeedBoardEntry(row:Record<string,any>){
   const value=camel(row),journey=row.journeys??{},vehicle=journey.vehicle_details??{};
@@ -321,6 +328,12 @@ async function handle(req:Request):Promise<Response> {
       .eq('status','active').is('deleted_at',null).order('updated_at',{ascending:false}).limit(500);
     const hazards=ensure(data,error).map(publicHazard).filter(Boolean);
     return json(req,{contractVersion:CONTRACT_VERSION,hazards});
+  }
+  if(path==='/api/public-speed-limits'&&method==='GET'){
+    const {data,error}=await db.from('speed_limits')
+      .select('mode,limit_kph,updated_at').is('deleted_at',null).order('mode');
+    const limits=ensure(data,error).map(publicSpeedLimit).filter(Boolean);
+    return json(req,{contractVersion:CONTRACT_VERSION,limits});
   }
   const publicReportMatch=path.match(/^\/api\/public-reports\/([a-z0-9_-]{12,80})$/);
   if(publicReportMatch&&method==='GET'){

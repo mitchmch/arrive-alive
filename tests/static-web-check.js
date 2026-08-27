@@ -88,12 +88,18 @@ assert.match(html, /file\.size>1024\*1024/, 'Profile photos must be limited to 1
 assert.match(html, /id="journeyHistory"/, 'Profile must include personal journey history');
 assert.match(html, /ownerId:session\?`user-\$\{session\.phone\}`:null/, 'Saved journeys must carry an owner ID');
 assert.match(html, /JOURNEY_PREF_STORAGE_KEY='arrive-alive-journey-preferences-v1'/, 'Journey mode preferences must persist safely');
+assert.match(html, /PUBLIC_SPEED_LIMIT_CACHE_KEY='arrive-alive-public-speed-limits-v1'/, 'Guest speed limits must have a persistent cache');
+assert.match(html, /function sanitizeSpeedLimits\(items\)/, 'Guest speed-limit payloads must be validated');
+assert.match(html, /async function startGuest\(\)\{\s*await \(publicSpeedLimitsPromise\|\|loadPublicSpeedLimits\(\)\);/, 'A first-time guest must wait for the public limits before opening setup');
+assert.match(html, /APP_API_URL\?`\$\{APP_API_URL\}\/api\/public-speed-limits`:'\/api\/public-speed-limits'/, 'Guest limits must use the public backend route with same-origin fallback');
+assert.match(html, /persistPublicSpeedLimitCache\(limits\)/, 'Fresh public speed limits must be cached');
 assert.match(html, /Limit \$\{getAdminSpeedLimit\(m\.id\)\} km\/h/, 'Wizard mode cards must use admin-synced limits');
 assert.match(html, /if\(currentScreen==='journey'\|\|journeyActive\|\|recording\)return;/, 'Sync refreshes must not change an opened journey limit');
 assert.match(html, /function startJourney\(\)\{\s*\/\/[\s\S]*?journey\.limit=getAdminSpeedLimit\(journey\.mode\);/, 'A journey must freeze the current mode limit when opened');
 assert.match(html, /hazardAlertTracker=ArriveAliveHazardAlerts\.createTracker\(\[800,500\]\)/, 'Hazard alerts must track 800 m and 500 m stages');
 assert.match(html, /buzzer\(\);\s*vibrate\(\);\s*speak\(/, 'Hazard alerts must buzz, vibrate and speak');
 assert.match(html, /loadPublicHazards\(\)/, 'Guests must load sanitized active hazards');
+assert.match(html, /publicSpeedLimitsPromise=loadPublicSpeedLimits\(\)/, 'Public speed limits must refresh at startup');
 assert.match(html, /Sign in to confirm community hazards/, 'Remote hazard writes must require authentication');
 
 assert.match(html, /id="screen-admin"[^>]*data-testid="screen-admin"/, 'A stable admin screen must exist');

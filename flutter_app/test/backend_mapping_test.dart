@@ -32,5 +32,36 @@ void main() {
       expect(SpeedLimitService.normalizeMode('motorcycle'), 'motorbike');
       expect(SpeedLimitService.normalizeMode('car'), 'car');
     });
+
+    test('sanitized public speed limits map without identity data', () {
+      final limits = SpeedLimitService.parseSpeedLimits({
+        'contractVersion': 4,
+        'speedLimits': [
+          {'mode': 'car', 'limitKph': 60},
+          {'vehicleType': 'bus', 'limitKmh': '55'},
+          {'mode': 'bike', 'limit_kmh': 45},
+          {'mode': 'lorry', 'limit': -1},
+        ],
+      });
+
+      expect(limits, {
+        'car': 60,
+        'bus': 55,
+        'motorbike': 45,
+      });
+    });
+
+    test('legacy authenticated speed-limit shapes remain compatible', () {
+      expect(
+        SpeedLimitService.parseSpeedLimits({'car': 70, 'bus': 60}),
+        {'car': 70, 'bus': 60},
+      );
+      expect(
+        SpeedLimitService.parseSpeedLimits([
+          {'vehicle_type': 'lorry', 'limit_kmh': 50},
+        ]),
+        {'lorry': 50},
+      );
+    });
   });
 }

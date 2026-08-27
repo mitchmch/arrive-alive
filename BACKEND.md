@@ -60,7 +60,7 @@ Profile photos are private, limited to JPEG/PNG/WebP and 2 MB, stored under a pe
 
 Public before custom session authentication: `GET /health`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/reset-pin`, and read-only `GET /api/public-reports/:slug`.
 
-Public reads are limited to slug-addressed sanitized agency-report snapshots and the sanitized, active-only `/api/public-hazards` feed. The hazard feed exposes only an opaque/stable ID, bounded type and label, cleaned description, validated rounded coordinates, bounded confirmation counts, and timestamps; it omits reporter, driver, and vehicle identity. Authenticated routes include profile/logout, `/api/sync`, journeys and atomic safety completion, Speed Board, agency rollups, speed reports, notifications, incident creation/confirmation, violations, agencies, and speed limits. Administrative routes include users, stats/overview, violation moderation/reports, speed-limit settings, rollup execution, public report publishing, and `/api/admin/sync-health`. Ownership is enforced on personal journeys, samples, and violations.
+Public reads are limited to slug-addressed sanitized agency-report snapshots, the sanitized active-only `/api/public-hazards` feed, and `/api/public-speed-limits`. The hazard feed exposes only an opaque/stable ID, bounded type and label, cleaned description, validated rounded coordinates, bounded confirmation counts, and timestamps; it omits reporter, driver, and vehicle identity. The speed-limit feed exposes only allowlisted vehicle modes, bounded kilometre-per-hour limits, and update timestamps so first-time guests receive the current administrator values. Authenticated routes include profile/logout, `/api/sync`, journeys and atomic safety completion, Speed Board, agency rollups, speed reports, notifications, incident creation/confirmation, violations, agencies, and speed limits. Administrative routes include users, stats/overview, violation moderation/reports, speed-limit settings, rollup execution, public report publishing, and `/api/admin/sync-health`. Ownership is enforced on personal journeys, samples, and violations.
 
 ## Deterministic safety intelligence
 
@@ -127,6 +127,7 @@ node tests/repository-check.js
 node tests/sync-api-check.js
 node tests/hazards-api-check.js
 node tests/hazard-alerts-check.js
+node tests/public-speed-limits-api-check.js
 deno test --no-config supabase/functions/app-api/helpers_test.ts
 
 dart format --set-exit-if-changed flutter_app/lib flutter_app/test

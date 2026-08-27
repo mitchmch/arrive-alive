@@ -24,31 +24,52 @@ class SpeedLimitService {
   static bool _valid(double? value) =>
       value != null && value.isFinite && value > 0;
 
-  /// Fetch speed limits from backend, cache locally for offline use.
-  /// Returns a map of vehicle_type -> limit_kmh.
-  static Future<Map<String, double>> fetchSpeedLimits() async {
-    try {
-      final data = await ApiService.get('/api/speed-limits');
-      final limits = <String, double>{};
-      if (data is Map) {
-        for (final entry in data.entries) {
-          final limit = _number(entry.value);
-          if (_valid(limit)) {
-            limits[normalizeMode(entry.key.toString())] = limit!;
-          }
+  /// Maps the sanitized public contract and legacy authenticated response
+  /// shapes into vehicle type -> km/h.
+  static Map<String, double> parseSpeedLimits(dynamic data) {
+    final limits = <String, double>{};
+    final source = data is Map &&
+            (data['speedLimits'] is List ||
+                data['speedLimits'] is Map ||
+                data['limits'] is List ||
+                data['limits'] is Map)
+        ? data['speedLimits'] ?? data['limits']
+        : data;
+    if (source is Map) {
+      for (final entry in source.entries) {
+        final limit = _number(entry.value);
+        if (_valid(limit)) {
+          limits[normalizeMode(entry.key.toString())] = limit!;
         }
-      } else if (data is List) {
-        for (final item in data) {
-          if (item is Map) {
-            final type = item['mode'] ?? item['vehicle_type'];
-            final limit =
-                _number(item['limitKph'] ?? item['limit_kmh'] ?? item['limit']);
-            if (type != null && _valid(limit)) {
-              limits[normalizeMode(type.toString())] = limit!;
-            }
+      }
+    } else if (source is List) {
+      for (final item in source) {
+        if (item is Map) {
+          final type =
+              item['mode'] ?? item['vehicleType'] ?? item['vehicle_type'];
+          final limit = _number(
+            item['limitKph'] ??
+                item['limitKmh'] ??
+                item['limit_kmh'] ??
+                item['limit'],
+          );
+          if (type != null && _valid(limit)) {
+            limits[normalizeMode(type.toString())] = limit!;
           }
         }
       }
+    }
+    return limits;
+  }
+
+  /// Fetch sanitized limits without a bearer token so guests and signed-in
+  /// customers load the same admin configuration, then cache it for offline
+  /// map startup.
+  /// Returns a map of vehicle_type -> limit_kmh.
+  static Future<Map<String, double>> fetchSpeedLimits() async {
+    try {
+      final data = await ApiService.getPublic(AppConfig.publicSpeedLimitsPath);
+      final limits = parseSpeedLimits(data);
       // Do not replace a useful persisted admin configuration with a malformed
       // or unexpectedly empty response.
       if (limits.isNotEmpty) {

@@ -185,6 +185,7 @@ node tests/sync-api-check.js
 node tests/backend-contract-check.js
 node tests/hazards-api-check.js
 node tests/hazard-alerts-check.js
+node tests/public-speed-limits-api-check.js
 ```
 
 The safety backend deliberately keeps classification separate from generated

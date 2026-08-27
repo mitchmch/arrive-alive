@@ -25,6 +25,10 @@ assert.match(edge, /https:\/\/cp\.arrivealive\.app/);
 assert.match(edge, /https:\/\/arrivealive\.app/);
 assert.match(edge, /function publicHazard\(/, 'Public hazard output must pass through an explicit sanitizer');
 assert.match(edge, /path==='\/api\/public-hazards'&&method==='GET'/, 'The guest-readable active hazard route must exist');
+assert.match(edge, /function publicSpeedLimit\(/, 'Public speed limits must pass through an explicit sanitizer');
+assert.match(edge, /path==='\/api\/public-speed-limits'&&method==='GET'/, 'The guest-readable speed-limit route must exist before authentication');
+assert.match(edge, /\.select\('mode,limit_kph,updated_at'\)\.is\('deleted_at',null\)/, 'Public speed limits must expose only the safe read fields from active records');
+assert.match(edge, /if\(!modes\.includes\(mode\)\|\|!Number\.isFinite\(limitKph\)\|\|limitKph<1\|\|limitKph>300\)return null/, 'Public speed-limit values must be allowlisted and bounded');
 assert.match(edge, /\.eq\('status','active'\)\.is\('deleted_at',null\)/, 'The public route must return active, non-deleted hazards only');
 assert.doesNotMatch(
   edge.match(/function publicHazard\([\s\S]*?\n\}/)?.[0] || '',

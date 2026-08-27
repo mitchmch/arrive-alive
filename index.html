@@ -2411,8 +2411,34 @@ const DEFECTS=['Broken mirrors','Worn tyres','Faulty headlights','Driver on phon
 
 /* ---- Admin-managed speed limits (in-memory demo backend) ---- */
 const DEFAULT_SPEED_LIMIT=70;
-let aaSpeedLimits={};
+const PUBLIC_SPEED_LIMIT_CACHE_KEY='arrive-alive-public-speed-limits-v1';
 const JOURNEY_PREF_STORAGE_KEY='arrive-alive-journey-preferences-v1';
+function sanitizeSpeedLimits(items){
+  const allowed=new Set(['car','bus','lorry','motorbike']);
+  const clean={};
+  (Array.isArray(items)?items:[]).forEach(item=>{
+    const mode=speedLimitModeKey(item?.mode??item?.vehicle_type);
+    const limit=Math.round(Number(item?.limitKph??item?.limit_kmh??item?.limit));
+    if(allowed.has(mode)&&Number.isFinite(limit)&&limit>=1&&limit<=300)clean[mode]=limit;
+  });
+  return clean;
+}
+function readPublicSpeedLimitCache(){
+  try{
+    const value=JSON.parse(window.localStorage.getItem(PUBLIC_SPEED_LIMIT_CACHE_KEY)||'null');
+    return sanitizeSpeedLimits(Object.entries(value?.limits||{}).map(([mode,limit])=>({mode,limit})));
+  }catch(_){return {};}
+}
+function persistPublicSpeedLimitCache(limits){
+  try{
+    window.localStorage.setItem(PUBLIC_SPEED_LIMIT_CACHE_KEY,JSON.stringify({
+      limits,
+      cachedAt:new Date().toISOString()
+    }));
+  }catch(_){}
+}
+let aaSpeedLimits=readPublicSpeedLimitCache();
+let publicSpeedLimitsPromise=null;
 function getAdminSpeedLimits(){
   return aaSpeedLimits;
 }
@@ -2462,7 +2488,8 @@ function resetAdminSpeedLimits(){
 const savedJourneyPreferences=readJourneyPreferences();
 let wizStep=0, journey={mode:savedJourneyPreferences.mode,limit:DEFAULT_SPEED_LIMIT,vehicleType:savedJourneyPreferences.vehicleType,reg:'',colour:'',driver:'Guest',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
 
-function startGuest(){
+async function startGuest(){
+  await (publicSpeedLimitsPromise||loadPublicSpeedLimits());
   setAASession(null);
   const preferences=readJourneyPreferences();
   wizStep=0;journey={mode:preferences.mode,limit:getAdminSpeedLimit(preferences.mode),vehicleType:preferences.vehicleType,reg:'',colour:'',driver:'Guest',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
@@ -3675,6 +3702,29 @@ async function loadPublicHazards(){
     console.warn('Public hazards are unavailable; keeping cached and seed hazards:',error.message);
   }
 }
+async function loadPublicSpeedLimits(){
+  if(publicSpeedLimitsPromise)return publicSpeedLimitsPromise;
+  const endpoint=APP_API_URL?`${APP_API_URL}/api/public-speed-limits`:'/api/public-speed-limits';
+  publicSpeedLimitsPromise=(async()=>{
+    try{
+      const response=await fetch(endpoint,{headers:{'Accept':'application/json'},cache:'no-store'});
+      if(!response.ok)throw new Error(`Public speed limits returned ${response.status}`);
+      const payload=await response.json();
+      const limits=sanitizeSpeedLimits(payload.limits);
+      if(!Object.keys(limits).length)throw new Error('Public speed limits were empty');
+      aaSpeedLimits=limits;
+      persistPublicSpeedLimitCache(limits);
+      refreshSelectedJourneyLimit();
+      if(currentScreen==='wizard')renderWiz();
+      else if(currentScreen==='journey'&&!journeyActive&&!recording)$('speedLimitNum').textContent=journey.limit;
+      return true;
+    }catch(error){
+      console.warn('Public speed limits are unavailable; keeping cached limits:',error.message);
+      return false;
+    }
+  })();
+  return publicSpeedLimitsPromise;
+}
 function distanceKm(a,b){
   const rad=Math.PI/180;
   const dLat=(b.lat-a.lat)*rad,dLng=(b.lng-a.lng)*rad;
@@ -4320,9 +4370,11 @@ function hydrateRepositoryData(){
     const index=hazards.findIndex(item=>item.id===incident.id);
     if(index>=0)hazards[index]=incident;else hazards.push(incident);
   });
-  aaSpeedLimits=Object.fromEntries(aaRepository.list('speedLimits')
-    .map(item=>[speedLimitModeKey(item.mode),Number(item.limit)])
-    .filter(([,limit])=>Number.isFinite(limit)&&limit>=1&&limit<=300));
+  const storedSpeedLimits=sanitizeSpeedLimits(aaRepository.list('speedLimits'));
+  if(Object.keys(storedSpeedLimits).length){
+    aaSpeedLimits=storedSpeedLimits;
+    persistPublicSpeedLimitCache(aaSpeedLimits);
+  }
   refreshSelectedJourneyLimit();
   if(currentScreen==='wizard')renderWiz();
   else if(currentScreen==='journey'&&!journeyActive&&!recording)$('speedLimitNum').textContent=journey.limit;
@@ -4485,6 +4537,7 @@ async function submitReport(){
 /* Init */
 window.addEventListener('load',()=>{
   hydrateRepositoryData();
+  publicSpeedLimitsPromise=loadPublicSpeedLimits();
   loadPublicHazards();
   if(getAASession()?.token){
     aaRepository.sync(getAASession().role||'user').then(()=>{hydrateRepositoryData();renderSyncHealth();});
