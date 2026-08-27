@@ -16,7 +16,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="arrive_alive"
+        android:label="Arrive Alive"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

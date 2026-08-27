@@ -1,7 +1,7 @@
 name: arrive_alive
 description: Road Safety for Cameroon - Monitor speeds, report violations, stay safe.
 publish_to: 'none'
-version: 2.1.0+2
+version: 3.0.0+3
 
 environment:
   sdk: '>=3.2.0 <4.0.0'

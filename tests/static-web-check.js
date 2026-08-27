@@ -44,7 +44,7 @@ assert.match(
   'The numeric step label must remain available to assistive technology only',
 );
 assert.doesNotMatch(html, /id="guideStepNumber"/, 'The numeric guide card indicator must be removed');
-for (const guideCopy of ['administrator-synced limit', 'speedometer', 'African voice', 'hazard triangle', '800 m', '500 m', 'Still there or Not there', 'bottom-right Report button', 'person icon']) {
+for (const guideCopy of ['administrator-synced limit', 'speedometer', 'African voice', 'hazard triangle', '800 m', '500 m', 'Still there or Not there', 'bottom-left Report button', 'person icon']) {
   assert.ok(html.includes(guideCopy), `The expanded guide must explain ${guideCopy}`);
 }
 assert.match(html, /style="--guide-color:\$\{item\.color\}"/, 'Each guide icon must retain its feature colour');

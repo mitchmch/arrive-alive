@@ -6,7 +6,7 @@ Road safety app for Cameroon. Monitor vehicle speeds in real-time, report violat
 
 - **Mapbox Maps** as default map provider (Waze-style dark navigation, 3D camera with pitch & bearing)
 - **Modern speedometer UI** — glassmorphic gauge with colored zones, needle, glow effect, status text
-- **Voice guidance** via flutter_tts (turn-by-turn spoken instructions)
+- **African cloud voice guidance** through the Arrive Alive voice API, with native flutter_tts fallback
 - Falls back to Google Maps automatically if no Mapbox token is set
 
 ## What's New in v2.0
@@ -27,6 +27,13 @@ Road safety app for Cameroon. Monitor vehicle speeds in real-time, report violat
 - SQLite (sqflite — offline-first local database)
 - connectivity_plus (online/offline detection)
 - flutter_tts (voice guidance)
+
+## Store release guide
+
+For production signing, release builds, testing tracks, App Store Connect,
+privacy declarations, and submission steps, follow
+[`STORE_DEPLOYMENT_GUIDE.md`](STORE_DEPLOYMENT_GUIDE.md). The guide is written
+for this repository and covers both Google Play and Apple App Store delivery.
 
 ## Administrator report export
 
