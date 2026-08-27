@@ -63,10 +63,8 @@ without a native share sheet use the administrator workspace safely.
 ### 1. Flutter Project
 
 ```bash
-# Generate platform folders
-flutter create . --org com.kutinacommunity --platforms android,ios
-
-# Install dependencies
+# Android and iOS platform folders are already included.
+# Install dependencies from the folder containing pubspec.yaml.
 flutter pub get
 ```
 
