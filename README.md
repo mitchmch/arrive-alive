@@ -11,7 +11,7 @@ Arrive Alive is a responsive road-safety web application for journey recording, 
 - Automatic light map during the day and dark map at night
 - Manual light and dark theme override
 - Realtime-style hazard reporting with pinned locations
-- Proximity warnings and “Still there” or “Not there” hazard confirmation
+- Per-journey 800 m and 500 m hazard warnings with buzz/haptic feedback and “Still there” or “Not there” confirmation
 - Journey stopping, restarting, completion, history, scoreboard, and reporting flows
 - Automatic, deterministic journey safety assessment and Speed Board publishing
 - Evidence-thresholded daily, weekly, and monthly agency safety status
@@ -183,6 +183,8 @@ node tests/static-web-check.js
 node tests/repository-check.js
 node tests/sync-api-check.js
 node tests/backend-contract-check.js
+node tests/hazards-api-check.js
+node tests/hazard-alerts-check.js
 ```
 
 The safety backend deliberately keeps classification separate from generated
@@ -223,8 +225,8 @@ Verify these flows in a clean browser session:
 3. Toggle light → dark → light and confirm the route remains visible.
 4. Report a road hazard and pin it to a map location.
 5. Confirm the hazard marker appears without stopping the active journey.
-6. Approach the hazard while moving and confirm the advance warning appears once.
-7. Select “Still there” and confirm the hazard remains active.
+6. Approach the hazard while moving and confirm one warning appears around 800 m, then one around 500 m, with buzz/haptic feedback at both stages.
+7. Select “Still there” and confirm the hazard remains active; select “Not there” for a separate hazard and confirm later alerts for it are cleared.
 8. Select “Not there” and confirm the marker is removed.
 9. Repeat the checks at phone and desktop viewport sizes.
 

@@ -9,7 +9,7 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('guide uses map-action icons instead of numeric progress',
+  testWidgets('guide renders every feature from the central registry',
       (tester) async {
     tester.view.physicalSize = const Size(320, 700);
     tester.view.devicePixelRatio = 1;
@@ -23,17 +23,25 @@ void main() {
       ),
     );
 
-    expect(find.byIcon(Icons.play_circle_outline), findsNWidgets(2));
-    expect(find.byIcon(Icons.navigation_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.report_outlined), findsOneWidget);
-    expect(find.text('1 of 4'), findsNothing);
+    expect(appFeatureGuideItems, hasLength(12));
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('guide-feature-registry')),
+        matching: find.byType(InkWell),
+      ),
+      findsNWidgets(appFeatureGuideItems.length),
+    );
+    for (final feature in appFeatureGuideItems) {
+      expect(find.byKey(Key('guide-feature-${feature.id}')), findsOneWidget);
+    }
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byKey(const Key('guide-next')));
+    await tester.tap(
+      find.byKey(const Key('guide-feature-navigation')),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Navigate'), findsOneWidget);
+    expect(find.text('Navigation'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

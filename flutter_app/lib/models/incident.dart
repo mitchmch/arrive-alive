@@ -123,6 +123,29 @@ class Incident {
         isLocal: _asBool(json['isLocal'] ?? json['is_local']) ?? false,
       );
 
+  /// Parses the deliberately limited public hazard shape. Reporter identity
+  /// and vehicle registration are ignored even if a malformed server response
+  /// includes them.
+  factory Incident.fromPublicJson(Map<String, dynamic> json) {
+    final incident = Incident.fromJson({
+      ...json,
+      // The public ID is intentionally opaque. Mutations still use the numeric
+      // remote ID supplied by the contract.
+      'id': json['remoteId'] ?? json['remote_id'] ?? json['id'],
+      'timestamp': json['updatedAt'] ??
+          json['updated_at'] ??
+          json['lastConfirmedAt'] ??
+          json['last_confirmed_at'] ??
+          '',
+      'confirmationCount': json['stillThere'] ??
+          json['still_there'] ??
+          json['confirmationCount'],
+      'notThereCount':
+          json['notThere'] ?? json['not_there'] ?? json['notThereCount'],
+    });
+    return incident.copyWith(vehicleReg: '', driverName: '');
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'type': type,

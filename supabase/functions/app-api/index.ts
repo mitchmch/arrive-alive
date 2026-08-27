@@ -5,12 +5,15 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://arrive-alive-virid.vercel.app',
+  'https://arrivealive.app',
   'https://cp.arrivealive.app',
 ];
-const ALLOWED_ORIGINS = (Deno.env.get('APP_ALLOWED_ORIGINS') ?? DEFAULT_ALLOWED_ORIGINS.join(','))
-  .split(',')
+const ALLOWED_ORIGINS = [...new Set([
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...(Deno.env.get('APP_ALLOWED_ORIGINS') ?? '').split(','),
+]
   .map((v) => v.trim())
-  .filter(Boolean);
+  .filter(Boolean))];
 const SESSION_TTL_DAYS = Math.max(1, Math.min(90, Number(Deno.env.get('APP_SESSION_TTL_DAYS') ?? 30)));
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_SUMMARY_MODEL = Deno.env.get('OPENAI_SUMMARY_MODEL') ?? 'gpt-5-mini';
@@ -64,6 +67,38 @@ async function idempotent(identity:Identity, req:Request, path:string, payload:u
 function ensure(data:unknown,error:unknown):any { if(error) throw error; return data; }
 function formatJourney(row:Record<string,unknown>){const value=camel(row);for(const key of ['vehicleDetails','assets','defects','path'])if(typeof value[key]!=='string')value[key]=JSON.stringify(value[key]??(key==='vehicleDetails'?{}:[]));return value;}
 function formatIncident(row:Record<string,unknown>){return camel(row);}
+function publicHazard(row:Record<string,unknown>){
+  const allowedTypes=['accident','collision','hazard','roadworks','pothole','blocked_road','fire','flooding','police','speed_camera'];
+  const labels:Record<string,string>={
+    accident:'Accident reported',collision:'Collision reported',hazard:'Road hazard',
+    roadworks:'Roadworks ahead',pothole:'Pothole reported',blocked_road:'Blocked road',
+    fire:'Fire reported',flooding:'Flooding reported',police:'Police checkpoint',
+    speed_camera:'Speed camera',
+  };
+  const type=allowedTypes.includes(String(row.type))?String(row.type):'hazard';
+  const cleanText=(value:unknown,max:number)=>String(value??'')
+    .replace(/[\u0000-\u001f\u007f]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim()
+    .slice(0,max);
+  const lat=Number(row.lat),lng=Number(row.lng);
+  if(!Number.isFinite(lat)||lat < -90||lat > 90||!Number.isFinite(lng)||lng < -180||lng > 180)return null;
+  return {
+    id:cleanText(row.stable_id??`incident-${row.id}`,100),
+    remoteId:Number(row.id),
+    type,
+    label:labels[type],
+    description:cleanText(row.description??'Community road report',240)||'Community road report',
+    lat:Number(lat.toFixed(5)),
+    lng:Number(lng.toFixed(5)),
+    status:'active',
+    stillThere:Math.max(0,Math.min(100000,Math.floor(Number(row.confirmation_count)||0))),
+    notThere:Math.max(0,Math.min(100000,Math.floor(Number(row.not_there_count)||0))),
+    lastConfirmedAt:row.last_confirmed_at??row.updated_at??null,
+    updatedAt:row.updated_at??null,
+    source:'community',
+  };
+}
 function formatAgency(row:Record<string,unknown>){const value=camel(row);return {...value,phone:value.contact??null,classification:value.safetyClassification??'unclassified',summaryText:value.summaryText??'',summarySource:value.summarySource??'human',violationCount:(value.metadata as any)?.violationCount??0,totalJourneys:(value.metadata as any)?.totalJourneys??0};}
 function formatSpeedLimit(row:Record<string,unknown>){const value=camel(row);return {...value,vehicle_type:value.mode,limit_kmh:value.limitKph};}
 function formatViolation(row:Record<string,unknown>){const value=camel(row);return {...value,lat:value.latitude??0,lng:value.longitude??0,timestamp:value.occurredAt,mode:(value.metadata as any)?.mode??'car',validated:value.status==='validated'?1:0,published:value.published?1:0,reportCount:value.sampleCount??(value.metadata as any)?.reportCount??1};}
@@ -280,6 +315,13 @@ async function handle(req:Request):Promise<Response> {
   if(req.method==='OPTIONS'){const origin=req.headers.get('origin')??''; if(origin&&!ALLOWED_ORIGINS.includes(origin)) return json(req,{error:'Origin is not allowed'},403); return new Response(null,{status:204,headers:cors(req)});}
   const path=routePath(req.url), url=new URL(req.url), method=req.method;
   if(path==='/health'&&method==='GET') return json(req,{ok:true,contractVersion:CONTRACT_VERSION,persistence:{durable:true,adapter:'supabase-postgres'}});
+  if(path==='/api/public-hazards'&&method==='GET'){
+    const {data,error}=await db.from('incidents')
+      .select('id,stable_id,type,description,lat,lng,status,confirmation_count,not_there_count,last_confirmed_at,updated_at')
+      .eq('status','active').is('deleted_at',null).order('updated_at',{ascending:false}).limit(500);
+    const hazards=ensure(data,error).map(publicHazard).filter(Boolean);
+    return json(req,{contractVersion:CONTRACT_VERSION,hazards});
+  }
   const publicReportMatch=path.match(/^\/api\/public-reports\/([a-z0-9_-]{12,80})$/);
   if(publicReportMatch&&method==='GET'){
     const {data,error}=await db.from('public_agency_reports').select('slug,snapshot,created_at,expires_at').eq('slug',publicReportMatch[1]).is('revoked_at',null).maybeSingle();

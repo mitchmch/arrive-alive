@@ -56,6 +56,7 @@ class AppConfig {
 
   // Incident map auto-refresh interval
   static const int hazardRefreshSeconds = 30;
+  static const String publicActiveHazardsPath = '/api/public-hazards';
 
   // Major Cameroon cities for destination search bias
   static const List<String> cameroonCities = [

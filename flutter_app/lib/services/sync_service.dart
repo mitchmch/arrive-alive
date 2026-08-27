@@ -74,6 +74,11 @@ class SyncService {
       'driverName': journeyData['driverName'],
       'passengerCount': journeyData['passengerCount'] ?? 1,
       'agencyId': journeyData['agencyId'],
+      'frozenSpeedLimit':
+          (journeyData['speedLimit'] ?? AppConfig.defaultSpeedLimit).toDouble(),
+      'speedLimitMode':
+          journeyData['speedLimitMode'] ?? journeyData['mode'] ?? 'car',
+      'speedLimitSelectedAt': journeyData['speedLimitSelectedAt'] ?? now,
       'startTime': journeyData['startTime'] ?? now,
       'endTime': null,
       'status': 'active',
@@ -107,6 +112,9 @@ class SyncService {
         'driverName': journeyData['driverName'],
         'passengerCount': journeyData['passengerCount'] ?? 1,
         'agencyId': journeyData['agencyId'],
+        'frozenSpeedLimit': journey['frozenSpeedLimit'],
+        'speedLimitMode': journey['speedLimitMode'],
+        'speedLimitSelectedAt': journey['speedLimitSelectedAt'],
         'startTime': journey['startTime'],
         'updatedAt': now,
         'version': 1,
@@ -167,6 +175,10 @@ class SyncService {
         'defects': journey?['defects'] ?? '[]',
         'driverName': journey?['driverName'],
         'passengerCount': journey?['passengerCount'] ?? 1,
+        'frozenSpeedLimit':
+            journey?['frozenSpeedLimit'] ?? AppConfig.defaultSpeedLimit,
+        'speedLimitMode': journey?['speedLimitMode'] ?? journey?['mode'],
+        'speedLimitSelectedAt': journey?['speedLimitSelectedAt'],
         'startTime': journey?['startTime'],
         'endTime': now,
         'distance': distance,

@@ -49,6 +49,18 @@ class ApiService {
     return _parse(res);
   }
 
+  /// Reads an explicitly public, sanitized resource without attaching a user
+  /// bearer token. Guest and signed-in map views therefore use the exact same
+  /// community hazard feed.
+  static Future<dynamic> getPublic(String path) async {
+    _requireBackend();
+    final res = await _client.get(
+      Uri.parse('$_baseUrl$path'),
+      headers: const {'Accept': 'application/json'},
+    );
+    return _parse(res);
+  }
+
   static Future<dynamic> post(
     String path,
     Map<String, dynamic> body, {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -47,6 +48,83 @@ List<Incident> incidentsWithinRadius(
     ).compareTo(incidentDistanceMeters(origin, b)),
   );
   return nearby;
+}
+
+@immutable
+class HazardProximityAlert {
+  const HazardProximityAlert({
+    required this.incidentId,
+    required this.thresholdMeters,
+    required this.distanceMeters,
+  });
+
+  final int incidentId;
+  final int thresholdMeters;
+  final double distanceMeters;
+}
+
+/// Journey-scoped threshold tracker. It emits each 800 m and 500 m alert once,
+/// and asks for a second consistent reading before accepting a large GPS jump.
+class HazardAlertTracker {
+  static const thresholds = [800, 500];
+  static const double maxAccuracyMeters = 80;
+  static const double jumpMeters = 450;
+  static const double jumpConfirmationToleranceMeters = 120;
+
+  final Map<int, double> _acceptedDistances = {};
+  final Map<int, double> _jumpCandidates = {};
+  final Set<String> _delivered = {};
+
+  void reset() {
+    _acceptedDistances.clear();
+    _jumpCandidates.clear();
+    _delivered.clear();
+  }
+
+  List<HazardProximityAlert> observe({
+    required int incidentId,
+    required double distanceMeters,
+    required double accuracyMeters,
+  }) {
+    if (!distanceMeters.isFinite ||
+        distanceMeters < 0 ||
+        !accuracyMeters.isFinite ||
+        accuracyMeters > maxAccuracyMeters) {
+      return const [];
+    }
+
+    final previous = _acceptedDistances[incidentId];
+    if (previous != null && (distanceMeters - previous).abs() > jumpMeters) {
+      final candidate = _jumpCandidates[incidentId];
+      if (candidate == null ||
+          (candidate - distanceMeters).abs() >
+              jumpConfirmationToleranceMeters) {
+        _jumpCandidates[incidentId] = distanceMeters;
+        return const [];
+      }
+    }
+    _jumpCandidates.remove(incidentId);
+    _acceptedDistances[incidentId] = distanceMeters;
+
+    final alerts = <HazardProximityAlert>[];
+    for (final threshold in thresholds) {
+      final key = '$incidentId:$threshold';
+      if (_delivered.contains(key)) continue;
+      final enteredRange = distanceMeters <= threshold &&
+          (previous == null || previous > threshold);
+      if (enteredRange) {
+        _delivered.add(key);
+        alerts.add(
+          HazardProximityAlert(
+            incidentId: incidentId,
+            thresholdMeters: threshold,
+            distanceMeters: distanceMeters,
+          ),
+        );
+      }
+    }
+    return alerts;
+  }
 }
 
 /// State for the community hazard map
@@ -160,9 +238,18 @@ class HazardController extends StateNotifier<HazardState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final data = await ApiService.get('/api/incidents');
-      final incidents = (data as List)
-          .map((j) => Incident.fromJson(j as Map<String, dynamic>))
+      final data =
+          await ApiService.getPublic(AppConfig.publicActiveHazardsPath);
+      final raw = data is List
+          ? data
+          : data is Map && data['hazards'] is List
+              ? data['hazards'] as List
+              : const [];
+      final incidents = raw
+          .whereType<Map>()
+          .map(
+            (j) => Incident.fromPublicJson(Map<String, dynamic>.from(j)),
+          )
           .where((i) => i.isActive && i.lat != null && i.lng != null)
           .toList();
 

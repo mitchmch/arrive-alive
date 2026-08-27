@@ -1755,7 +1755,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
       <div class="guide-head">
         <div>
           <div class="guide-eyebrow" aria-hidden="true">User guide</div>
-          <span class="sr-only" id="guideStepLabel" data-testid="guide-step-label">Step 1 of 4</span>
+          <span class="sr-only" id="guideStepLabel" data-testid="guide-step-label">Step 1 of 8</span>
           <h2 class="guide-title" id="guideTitle">Drive with live speed recording</h2>
         </div>
         <button type="button" class="guide-skip" onclick="closeGuide(true)" aria-label="Skip user guide" data-testid="button-guide-skip">Skip</button>
@@ -1791,6 +1791,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 </div>
 
 <script src="web-repository.js"></script>
+<script src="web-hazard-alerts.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script>
 /* ============================================================
@@ -2265,39 +2266,71 @@ let guideSeenFallback=false;
 let guideStep=0;
 const GUIDE_STEPS=[
   {
-    title:'Drive / Start',
-    heading:'Drive with live speed recording',
+    title:'Vehicle & limit',
+    heading:'Choose the right vehicle',
     icon:'play',
-    copy:'Set up the vehicle, open the journey map, then tap Start. Speed recording begins only when the vehicle moves.',
-    note:'Keep location access on for accurate live speed and distance.'
+    copy:'Choose Car, Bus, Lorry or Motorbike. Each card shows the latest administrator-synced limit for that vehicle.',
+    note:'Your choice persists. The displayed limit is frozen when that journey opens, so a mid-journey sync cannot change it.'
   },
   {
-    title:'Navigate',
-    heading:'Choose a destination',
+    title:'Start & speed',
+    heading:'Start live speed recording',
+    icon:'speedometer',
+    copy:'On the map, Start records only after movement. The speedometer, limit badge, distance, duration and violations update together.',
+    note:'Keep location access on; the map and speedometer stay at 0 while stationary.'
+  },
+  {
+    title:'Navigate & voice',
+    heading:'Route with spoken guidance',
     icon:'navigation',
-    copy:'Tap Navigate, search for a city and select it. The map shows the route and gives turn-by-turn guidance.',
-    note:'Selecting a route never starts speed recording automatically.'
+    copy:'Tap Navigate, choose a destination and follow the route banner. Tap the speaker icon to turn voice guidance on or off.',
+    note:'Choosing a route never starts speed recording.'
   },
   {
-    title:'Hazards',
-    heading:'See and confirm active hazards',
+    title:'Hazard map',
+    heading:'Show or hide active hazards',
     icon:'hazard',
-    copy:'Active community hazards appear on the map by default. Open a marker and choose Still there or Not there to keep reports current.',
-    note:'Hazard viewing and confirmations are available to guests and signed-in users.'
+    copy:'The hazard triangle toggles active community markers. Open a marker to read its type, location and latest confirmation.',
+    note:'Active hazard locations are visible to guests; server updates require a signed-in account.'
+  },
+  {
+    title:'800 m alert',
+    heading:'First hazard warning',
+    icon:'alert',
+    copy:'At about 800 m, the app shows and speaks a hazard alert, buzzes and uses device vibration when supported.',
+    note:'Each hazard triggers this stage only once per journey.'
+  },
+  {
+    title:'500 m confirm',
+    heading:'Confirm closer hazards',
+    icon:'confirm',
+    copy:'At about 500 m, a second buzz and alert asks Still there or Not there. GPS jumps across both distances are handled without duplicate alerts.',
+    note:'Your confirmation keeps the community map current.'
   },
   {
     title:'Report',
     heading:'Report what you observe',
     icon:'report',
-    copy:'Tap Report, choose an incident, confirm its location and submit. New road incidents appear as active map hazards.',
-    note:'Registered users and administrators can open Profile to view the Speed Board; guests are prompted to sign in.'
+    copy:'Tap the report document icon, choose an incident, pin its location and submit. Signed-in reports become active map hazards.',
+    note:'Use a precise location, a short description and only report what you observe.'
+  },
+  {
+    title:'Profile & board',
+    heading:'Review your safety record',
+    icon:'profile',
+    copy:'The person icon opens Profile, journey history and the Speed Board for registered users. The question-mark icon reopens this guide.',
+    note:'Administrators also manage persistent vehicle speed limits and synchronization health.'
   }
 ];
 const GUIDE_ICONS={
   play:'<path d="M8 5v14l11-7z"/>',
+  speedometer:'<path d="M4 16a8 8 0 1116 0"/><path d="M12 16l4-5M7 19h10"/>',
   navigation:'<path d="M3 11l18-8-8 18-2-8z"/>',
   hazard:'<path d="M12 3L2.8 20h18.4L12 3z"/><path d="M12 9v4M12 17h.01"/>',
-  report:'<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>'
+  alert:'<path d="M12 3L2.8 20h18.4L12 3z"/><path d="M12 8v5M12 17h.01"/>',
+  confirm:'<path d="M4 12l5 5L20 6"/><circle cx="12" cy="12" r="10"/>',
+  report:'<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+  profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>'
 };
 function guideIconSvg(icon){
   return `<svg viewBox="0 0 24 24" aria-hidden="true">${GUIDE_ICONS[icon]||GUIDE_ICONS.report}</svg>`;
@@ -2379,6 +2412,7 @@ const DEFECTS=['Broken mirrors','Worn tyres','Faulty headlights','Driver on phon
 /* ---- Admin-managed speed limits (in-memory demo backend) ---- */
 const DEFAULT_SPEED_LIMIT=70;
 let aaSpeedLimits={};
+const JOURNEY_PREF_STORAGE_KEY='arrive-alive-journey-preferences-v1';
 function getAdminSpeedLimits(){
   return aaSpeedLimits;
 }
@@ -2388,8 +2422,29 @@ function speedLimitModeKey(mode){
 function getAdminSpeedLimit(mode){
   const limits=getAdminSpeedLimits();
   const key=speedLimitModeKey(mode);
-  if(limits[key])return limits[key];
+  const value=Number(limits[key]);
+  if(Number.isFinite(value)&&value>=1&&value<=300)return Math.round(value);
   return DEFAULT_SPEED_LIMIT;
+}
+function readJourneyPreferences(){
+  try{
+    const value=JSON.parse(window.localStorage.getItem(JOURNEY_PREF_STORAGE_KEY)||'null');
+    const mode=MODES.some(item=>item.id===value?.mode)?value.mode:'car';
+    const types=VEHICLE_TYPES[mode];
+    return {mode,vehicleType:types.includes(value?.vehicleType)?value.vehicleType:types[0]};
+  }catch(_){return {mode:'car',vehicleType:VEHICLE_TYPES.car[0]};}
+}
+function saveJourneyPreferences(){
+  try{
+    window.localStorage.setItem(JOURNEY_PREF_STORAGE_KEY,JSON.stringify({
+      mode:journey.mode,
+      vehicleType:VEHICLE_TYPES[journey.mode]?.includes(journey.vehicleType)?journey.vehicleType:VEHICLE_TYPES[journey.mode]?.[0]
+    }));
+  }catch(_){}
+}
+function refreshSelectedJourneyLimit(){
+  if(currentScreen==='journey'||journeyActive||recording)return;
+  journey.limit=getAdminSpeedLimit(journey.mode);
 }
 function setAdminSpeedLimit(mode,limit){
   const limits=getAdminSpeedLimits();
@@ -2404,11 +2459,13 @@ function resetAdminSpeedLimits(){
   queueSync();
 }
 
-let wizStep=0, journey={mode:'car',limit:70,vehicleType:'Saloon',reg:'',colour:'',driver:'Guest',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
+const savedJourneyPreferences=readJourneyPreferences();
+let wizStep=0, journey={mode:savedJourneyPreferences.mode,limit:DEFAULT_SPEED_LIMIT,vehicleType:savedJourneyPreferences.vehicleType,reg:'',colour:'',driver:'Guest',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
 
 function startGuest(){
   setAASession(null);
-  wizStep=0;journey={mode:'car',limit:70,vehicleType:'Saloon',reg:'',colour:'',driver:'Guest',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
+  const preferences=readJourneyPreferences();
+  wizStep=0;journey={mode:preferences.mode,limit:getAdminSpeedLimit(preferences.mode),vehicleType:preferences.vehicleType,reg:'',colour:'',driver:'Guest',passengers:1,agencyId:null,agencyName:'',assets:[],defects:[]};
   navigate('wizard');renderWiz();
 }
 function startNewJourneySetup(){
@@ -2430,14 +2487,14 @@ function renderWiz(){
     body.innerHTML=`<div class="mode-grid">${MODES.map(m=>`
       <div class="mode-card ${journey.mode===m.id?'selected':''}" onclick="selectMode('${m.id}')">
         <div class="mode-emoji">${m.emoji}</div><div class="mode-label">${m.label}</div>
-        <div class="mode-limit">Limit ${m.limit} km/h</div>
+        <div class="mode-limit">Limit ${getAdminSpeedLimit(m.id)} km/h</div>
       </div>`).join('')}</div>`;
   }else if(wizStep===1){
     $('wizTitle').textContent='Vehicle Details';
     $('wizSub').textContent='Enter information about your vehicle.';
     body.innerHTML=`
       <div class="form-group"><label class="form-label">Vehicle type</label>
-        <select class="form-select" onchange="journey.vehicleType=this.value">
+        <select class="form-select" onchange="journey.vehicleType=this.value;saveJourneyPreferences()">
           ${VEHICLE_TYPES[journey.mode].map(t=>`<option ${t===journey.vehicleType?'selected':''}>${t}</option>`).join('')}
         </select></div>
       <div class="form-group"><label class="form-label">Travel agency <span class="optional-label">Optional</span></label>
@@ -2480,7 +2537,14 @@ function selectJourneyAgency(value){
   journey.agencyId=agency?.id||null;
   journey.agencyName=agency?.name||'';
 }
-function selectMode(id){journey.mode=id;journey.limit=getAdminSpeedLimit(id);journey.vehicleType=VEHICLE_TYPES[id][0];renderWiz();}
+function selectMode(id){
+  if(!VEHICLE_TYPES[id])return;
+  journey.mode=id;
+  journey.limit=getAdminSpeedLimit(id);
+  journey.vehicleType=VEHICLE_TYPES[id][0];
+  saveJourneyPreferences();
+  renderWiz();
+}
 function stepper(d){journey.passengers=Math.max(1,Math.min(50,journey.passengers+d));$('pax').textContent=journey.passengers;}
 function toggleCheck(arr,i){journey[arr][i]=!journey[arr][i];renderWiz();}
 function wizNext(){if(wizStep<3){wizStep++;renderWiz();}else finishWizard();}
@@ -2566,6 +2630,7 @@ let hazards=HAZARD_SEEDS.map(h=>({
   ...h,status:'active',createdAt:seedTime,updatedAt:seedTime,lastConfirmedAt:seedTime,
   stillThere:1,notThere:0,source:'community'
 }));
+let publicHazardIds=new Set();
 const HAZARD_STYLE={
   accident:{c:'#dd2d4a',e:'🚨'},
   collision:{c:'#dd2d4a',e:'🚗'},
@@ -2579,8 +2644,9 @@ const HAZARD_STYLE={
   hazard:{c:'#eb6424',e:'⚠️'}
 };
 let hazardSequence=HAZARD_SEEDS.length;
-let warnedHazardIds=new Set();
+const hazardAlertTracker=ArriveAliveHazardAlerts.createTracker([800,500]);
 let currentAlertHazardId=null;
+let currentAlertStageMeters=null;
 let reportLocation=null;
 let pinPlacementActive=false;
 
@@ -2961,6 +3027,10 @@ function updateRouteLayer(){
 }
 
 function startJourney(){
+  // Freeze the current administrator-synced limit for this journey. Later
+  // synchronizations update the next setup, never an in-progress journey.
+  journey.limit=getAdminSpeedLimit(journey.mode);
+  saveJourneyPreferences();
   navigate('journey');
   // A cold MapLibre load is asynchronous. Seed the simulator route before
   // initMap so the Start control can never outrun the map's load callback.
@@ -2973,7 +3043,7 @@ function startJourney(){
   stopMotionTracking();
   journeyActive=false;recording=false;posIdx=0;window._arrived=false;
   selectedDestination=null;hasMovedDuringJourney=false;
-  warnedHazardIds=new Set();hideHazardAlert();
+  hazardAlertTracker.reset();hideHazardAlert();
   hazardsVisible=true;
   $('fabHazard').classList.add('active');
   syncHazardMarkers();
@@ -2988,7 +3058,6 @@ function startJourney(){
   $('navRow').classList.remove('show');
   $('bottomSheet').classList.remove('nav-active');
   updateStats();
-  journey.limit=getAdminSpeedLimit(journey.mode);
   $('speedLimitNum').textContent=journey.limit;
   $('streetName').textContent='Ready to drive';
   $('nextTurnText').textContent='Tap Start to begin';
@@ -3519,9 +3588,37 @@ function toggleHazards(){
   syncHazardMarkers();
   showToast(hazardsVisible?'Hazards shown on map':'Hazards hidden');
 }
-function confirmHazard(id,isStillThere){
+async function confirmHazard(id,isStillThere){
   const h=hazards.find(item=>item.id===id&&item.status==='active');
   if(!h)return;
+  const session=getAASession();
+  if(APP_API_URL&&Number.isInteger(Number(h.remoteId))){
+    if(!session?.token){
+      showToast('Sign in to confirm community hazards');
+      return;
+    }
+    try{
+      const updated=await callAppApi(`/api/incidents/${Number(h.remoteId)}/confirm`,{
+        method:'POST',
+        token:session.token,
+        idempotencyKey:`hazard-confirm:${h.remoteId}:${isStillThere}:${Date.now()}`,
+        body:{stillThere:isStillThere}
+      });
+      h.stillThere=Number(updated.confirmationCount??h.stillThere);
+      h.notThere=Number(updated.notThereCount??h.notThere);
+      h.lastConfirmedAt=updated.lastConfirmedAt??h.lastConfirmedAt;
+      h.updatedAt=updated.updatedAt??new Date().toISOString();
+      h.status=updated.status??(isStillThere?'active':'resolved');
+      if(h.status!=='active'){
+        h.resolvedAt=updated.resolvedAt??h.updatedAt;
+        hazardAlertTracker.discardHazard(id);
+      }
+      if(currentAlertHazardId===id)hideHazardAlert({showNext:true});
+      syncHazardMarkers();
+      showToast(isStillThere?'Thanks — hazard confirmed':'Thanks — hazard removed');
+    }catch(error){showToast(error.message||'Hazard confirmation failed');}
+    return;
+  }
   const now=new Date().toISOString();
   h.updatedAt=now;
   if(isStillThere){
@@ -3532,12 +3629,51 @@ function confirmHazard(id,isStillThere){
     h.notThere+=1;
     h.status='resolved';
     h.resolvedAt=now;
+    hazardAlertTracker.discardHazard(id);
     showToast('Thanks — hazard removed');
   }
-  if(currentAlertHazardId===id)hideHazardAlert();
+  if(currentAlertHazardId===id)hideHazardAlert({showNext:true});
   aaRepository.upsert('incidents',h);
   queueSync();
   syncHazardMarkers();
+}
+async function loadPublicHazards(){
+  const endpoint=APP_API_URL?`${APP_API_URL}/api/public-hazards`:'/api/hazards';
+  try{
+    const response=await fetch(endpoint,{headers:{'Accept':'application/json'},cache:'no-store'});
+    if(!response.ok)throw new Error(`Public hazards returned ${response.status}`);
+    const payload=await response.json();
+    const incoming=(Array.isArray(payload.hazards)?payload.hazards:[]).filter(item=>
+      item&&typeof item.id==='string'&&item.id.length<=100&&item.status==='active'
+      &&Number.isFinite(Number(item.lat))&&Number(item.lat)>=-90&&Number(item.lat)<=90
+      &&Number.isFinite(Number(item.lng))&&Number(item.lng)>=-180&&Number(item.lng)<=180
+    ).map(item=>({
+      id:item.id,
+      remoteId:Number.isInteger(Number(item.remoteId))?Number(item.remoteId):null,
+      type:HAZARD_STYLE[item.type]?item.type:'hazard',
+      label:String(item.label||'Road hazard').slice(0,80),
+      description:String(item.description||'Community road report').slice(0,240),
+      lat:Number(item.lat),
+      lng:Number(item.lng),
+      status:'active',
+      stillThere:Math.max(0,Number(item.stillThere)||0),
+      notThere:Math.max(0,Number(item.notThere)||0),
+      lastConfirmedAt:item.lastConfirmedAt||item.updatedAt||null,
+      updatedAt:item.updatedAt||null,
+      source:'community'
+    }));
+    const previousPublicIds=publicHazardIds;
+    publicHazardIds=new Set(incoming.map(item=>item.id));
+    hazards=hazards.filter(item=>!previousPublicIds.has(item.id));
+    incoming.forEach(item=>{
+      const index=hazards.findIndex(existing=>existing.id===item.id);
+      if(index>=0)hazards[index]=item;
+      else hazards.push(item);
+    });
+    syncHazardMarkers();
+  }catch(error){
+    console.warn('Public hazards are unavailable; keeping cached and seed hazards:',error.message);
+  }
 }
 function distanceKm(a,b){
   const rad=Math.PI/180;
@@ -3550,24 +3686,32 @@ function formatDistance(km){
 }
 function checkHazardProximity(){
   if(!recording||!journeyActive||liveSpeed<MOTION_THRESHOLD_KMH)return;
-  const nearby=hazards
-    .filter(h=>h.status==='active'&&!warnedHazardIds.has(h.id))
-    .map(h=>({h,d:distanceKm(curPos,h)}))
-    .filter(x=>x.d<=0.45)
-    .sort((a,b)=>a.d-b.d)[0];
-  if(!nearby)return;
-  warnedHazardIds.add(nearby.h.id);
-  currentAlertHazardId=nearby.h.id;
-  const style=HAZARD_STYLE[nearby.h.type]||HAZARD_STYLE.hazard;
-  $('hazardAlertIcon').textContent=style.e;
-  $('hazardAlertTitle').textContent=nearby.h.label;
-  $('hazardAlertDistance').textContent=`About ${formatDistance(nearby.d)} away`;
-  $('hazardAlert').classList.add('show');
-  speak(`${nearby.h.label} ahead, about ${formatDistance(nearby.d)} away.`);
+  hazardAlertTracker.update(
+    hazards,
+    hazard=>distanceKm(curPos,hazard)*1000
+  );
+  showNextHazardAlert();
 }
-function hideHazardAlert(){
+function showNextHazardAlert(){
+  if(currentAlertHazardId)return;
+  const nearby=hazardAlertTracker.next();
+  if(!nearby)return;
+  currentAlertHazardId=nearby.hazardId;
+  currentAlertStageMeters=nearby.thresholdMeters;
+  const style=HAZARD_STYLE[nearby.hazard.type]||HAZARD_STYLE.hazard;
+  $('hazardAlertIcon').textContent=style.e;
+  $('hazardAlertTitle').textContent=nearby.hazard.label;
+  $('hazardAlertDistance').textContent=`${nearby.thresholdMeters} m warning · about ${formatDistance(nearby.distanceMeters/1000)} away`;
+  $('hazardAlert').classList.add('show');
+  buzzer();
+  vibrate();
+  speak(`${nearby.hazard.label} ahead. ${nearby.thresholdMeters} metre warning, about ${formatDistance(nearby.distanceMeters/1000)} away. Is it still there?`);
+}
+function hideHazardAlert({showNext=false}={}){
   currentAlertHazardId=null;
+  currentAlertStageMeters=null;
   $('hazardAlert').classList.remove('show');
+  if(showNext)setTimeout(showNextHazardAlert,120);
 }
 function confirmAlertHazard(isStillThere){
   if(currentAlertHazardId)confirmHazard(currentAlertHazardId,isStillThere);
@@ -4176,7 +4320,12 @@ function hydrateRepositoryData(){
     const index=hazards.findIndex(item=>item.id===incident.id);
     if(index>=0)hazards[index]=incident;else hazards.push(incident);
   });
-  aaSpeedLimits=Object.fromEntries(aaRepository.list('speedLimits').map(item=>[item.mode,item.limit]));
+  aaSpeedLimits=Object.fromEntries(aaRepository.list('speedLimits')
+    .map(item=>[speedLimitModeKey(item.mode),Number(item.limit)])
+    .filter(([,limit])=>Number.isFinite(limit)&&limit>=1&&limit<=300));
+  refreshSelectedJourneyLimit();
+  if(currentScreen==='wizard')renderWiz();
+  else if(currentScreen==='journey'&&!journeyActive&&!recording)$('speedLimitNum').textContent=journey.limit;
 }
 
 /* ============================================================
@@ -4336,6 +4485,7 @@ async function submitReport(){
 /* Init */
 window.addEventListener('load',()=>{
   hydrateRepositoryData();
+  loadPublicHazards();
   if(getAASession()?.token){
     aaRepository.sync(getAASession().role||'user').then(()=>{hydrateRepositoryData();renderSyncHealth();});
   }else renderSyncHealth();

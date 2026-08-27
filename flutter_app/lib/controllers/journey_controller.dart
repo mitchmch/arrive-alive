@@ -12,6 +12,8 @@ import '../services/location_service.dart';
 import '../services/speed_limit_service.dart';
 import '../services/sync_service.dart';
 
+typedef SpeedLimitLoader = Future<double> Function(String mode);
+
 class JourneyState {
   final String? mode;
   final Map<String, dynamic> vehicleDetails;
@@ -34,6 +36,8 @@ class JourneyState {
   final List<Map<String, double>> path;
   final bool isViolating;
   final double speedLimit;
+  final bool isSpeedLimitLoading;
+  final DateTime? speedLimitSelectedAt;
   final int sampleCount;
 
   JourneyState({
@@ -58,6 +62,8 @@ class JourneyState {
     this.path = const [],
     this.isViolating = false,
     this.speedLimit = AppConfig.defaultSpeedLimit,
+    this.isSpeedLimitLoading = false,
+    this.speedLimitSelectedAt,
     this.sampleCount = 0,
   });
 
@@ -83,6 +89,8 @@ class JourneyState {
     List<Map<String, double>>? path,
     bool? isViolating,
     double? speedLimit,
+    bool? isSpeedLimitLoading,
+    DateTime? speedLimitSelectedAt,
     int? sampleCount,
   }) =>
       JourneyState(
@@ -107,6 +115,8 @@ class JourneyState {
         path: path ?? this.path,
         isViolating: isViolating ?? this.isViolating,
         speedLimit: speedLimit ?? this.speedLimit,
+        isSpeedLimitLoading: isSpeedLimitLoading ?? this.isSpeedLimitLoading,
+        speedLimitSelectedAt: speedLimitSelectedAt ?? this.speedLimitSelectedAt,
         sampleCount: sampleCount ?? this.sampleCount,
       );
 }
@@ -123,14 +133,53 @@ class JourneyController extends StateNotifier<JourneyState> {
   late SpeedEvidenceTracker _evidenceTracker;
   Future<JourneyEvidenceSummary>? _stopFuture;
   Future<void> _evidenceWrites = Future.value();
+  final SpeedLimitLoader _loadSpeedLimit;
+  int _speedLimitRequest = 0;
 
-  JourneyController() : super(JourneyState()) {
+  JourneyController({SpeedLimitLoader? speedLimitLoader})
+      : _loadSpeedLimit = speedLimitLoader ?? SpeedLimitService.getLimitForMode,
+        super(JourneyState()) {
     _evidenceTracker = SpeedEvidenceTracker(
       requiredReadings: AppConfig.violationReadingsThreshold,
     );
   }
 
-  void setMode(String mode) => state = state.copyWith(mode: mode);
+  Future<void> setMode(String mode) async {
+    if (state.isRecording) return;
+    final normalized = SpeedLimitService.normalizeMode(mode);
+    final request = ++_speedLimitRequest;
+    state = state.copyWith(
+      mode: mode,
+      isSpeedLimitLoading: true,
+    );
+    final cached = await SpeedLimitService.getCachedLimitForMode(normalized);
+    if (request != _speedLimitRequest || state.isRecording) return;
+    state = state.copyWith(speedLimit: cached);
+    try {
+      final limit = await _loadSpeedLimit(normalized);
+      if (request != _speedLimitRequest || state.isRecording) return;
+      state = state.copyWith(
+        speedLimit: limit,
+        isSpeedLimitLoading: false,
+        speedLimitSelectedAt: DateTime.now().toUtc(),
+      );
+    } catch (_) {
+      if (request == _speedLimitRequest && !state.isRecording) {
+        state = state.copyWith(
+          isSpeedLimitLoading: false,
+          speedLimitSelectedAt: DateTime.now().toUtc(),
+        );
+      }
+    }
+  }
+
+  /// Refreshes the displayed pre-journey limit. Once recording starts, the
+  /// chosen value is immutable and this method intentionally does nothing.
+  Future<void> refreshSpeedLimit() async {
+    final mode = state.mode;
+    if (mode == null || state.isRecording) return;
+    await setMode(mode);
+  }
 
   void setVehicleDetails(Map<String, dynamic> details) =>
       state = state.copyWith(vehicleDetails: details);
@@ -189,7 +238,10 @@ class JourneyController extends StateNotifier<JourneyState> {
 
     // Freeze the latest admin-configured limit for the whole journey so every
     // sample and episode is evaluated against the same auditable value.
-    final speedLimit = await SpeedLimitService.getLimitForMode(state.mode!);
+    final speedLimit = await _loadSpeedLimit(
+      SpeedLimitService.normalizeMode(state.mode!),
+    );
+    final selectedAt = DateTime.now().toUtc();
 
     // Create journey offline-first via SyncService
     final localId = await _syncService.createJourneyLocal({
@@ -201,6 +253,9 @@ class JourneyController extends StateNotifier<JourneyState> {
       'driverName': state.driverName,
       'passengerCount': state.passengerCount,
       'agencyId': state.agencyId,
+      'speedLimit': speedLimit,
+      'speedLimitMode': SpeedLimitService.normalizeMode(state.mode!),
+      'speedLimitSelectedAt': selectedAt.toIso8601String(),
     });
 
     state = state.copyWith(
@@ -210,6 +265,8 @@ class JourneyController extends StateNotifier<JourneyState> {
       currentSpeed: 0,
       isViolating: false,
       speedLimit: speedLimit,
+      isSpeedLimitLoading: false,
+      speedLimitSelectedAt: selectedAt,
       sampleCount: 0,
       violationCount: 0,
       maxSpeed: 0,

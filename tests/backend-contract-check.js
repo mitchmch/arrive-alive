@@ -22,6 +22,15 @@ assert.match(helpers, /PBKDF2/);
 assert.match(edge, /token_hash/);
 assert.match(edge, /Administrator access required/);
 assert.match(edge, /https:\/\/cp\.arrivealive\.app/);
+assert.match(edge, /https:\/\/arrivealive\.app/);
+assert.match(edge, /function publicHazard\(/, 'Public hazard output must pass through an explicit sanitizer');
+assert.match(edge, /path==='\/api\/public-hazards'&&method==='GET'/, 'The guest-readable active hazard route must exist');
+assert.match(edge, /\.eq\('status','active'\)\.is\('deleted_at',null\)/, 'The public route must return active, non-deleted hazards only');
+assert.doesNotMatch(
+  edge.match(/function publicHazard\([\s\S]*?\n\}/)?.[0] || '',
+  /reporter|vehicle_reg|driver_name/,
+  'Public hazard output must not expose reporter or vehicle identity',
+);
 for (const route of ['/api/auth/register','/api/auth/login','/api/auth/reset-pin','/api/profile','/api/sync','/api/stats','/api/users','/api/admin/sync-health']) {
   assert.ok(edge.includes(route), `Edge API route missing: ${route}`);
 }

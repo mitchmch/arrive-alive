@@ -9,6 +9,9 @@ class Journey {
   final String? driverName;
   final int passengerCount;
   final int? agencyId;
+  final double frozenSpeedLimit;
+  final String speedLimitMode;
+  final String? speedLimitSelectedAt;
   final double? startLat;
   final double? startLng;
   final double? endLat;
@@ -36,6 +39,9 @@ class Journey {
     this.driverName,
     this.passengerCount = 1,
     this.agencyId,
+    this.frozenSpeedLimit = 70,
+    String? speedLimitMode,
+    this.speedLimitSelectedAt,
     this.startLat,
     this.startLng,
     this.endLat,
@@ -51,7 +57,7 @@ class Journey {
     this.updatedAt,
     this.version = 1,
     this.isSynced = true,
-  });
+  }) : speedLimitMode = speedLimitMode ?? mode;
 
   factory Journey.fromJson(Map<String, dynamic> json) => Journey(
         id: json['id'] ?? 0,
@@ -64,6 +70,11 @@ class Journey {
         driverName: json['driverName'],
         passengerCount: json['passengerCount'] ?? 1,
         agencyId: json['agencyId'],
+        frozenSpeedLimit:
+            (json['frozenSpeedLimit'] ?? json['speedLimit'] ?? 70).toDouble(),
+        speedLimitMode:
+            (json['speedLimitMode'] ?? json['mode'] ?? 'car').toString(),
+        speedLimitSelectedAt: json['speedLimitSelectedAt']?.toString(),
         startLat: json['startLat']?.toDouble(),
         startLng: json['startLng']?.toDouble(),
         endLat: json['endLat']?.toDouble(),

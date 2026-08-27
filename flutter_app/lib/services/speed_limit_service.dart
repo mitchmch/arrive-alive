@@ -21,6 +21,9 @@ class SpeedLimitService {
     return double.tryParse('$value');
   }
 
+  static bool _valid(double? value) =>
+      value != null && value.isFinite && value > 0;
+
   /// Fetch speed limits from backend, cache locally for offline use.
   /// Returns a map of vehicle_type -> limit_kmh.
   static Future<Map<String, double>> fetchSpeedLimits() async {
@@ -30,8 +33,8 @@ class SpeedLimitService {
       if (data is Map) {
         for (final entry in data.entries) {
           final limit = _number(entry.value);
-          if (limit != null) {
-            limits[normalizeMode(entry.key.toString())] = limit;
+          if (_valid(limit)) {
+            limits[normalizeMode(entry.key.toString())] = limit!;
           }
         }
       } else if (data is List) {
@@ -40,15 +43,18 @@ class SpeedLimitService {
             final type = item['mode'] ?? item['vehicle_type'];
             final limit =
                 _number(item['limitKph'] ?? item['limit_kmh'] ?? item['limit']);
-            if (type != null && limit != null) {
-              limits[normalizeMode(type.toString())] = limit;
+            if (type != null && _valid(limit)) {
+              limits[normalizeMode(type.toString())] = limit!;
             }
           }
         }
       }
-      // Cache for offline use
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_cacheKey, jsonEncode(limits));
+      // Do not replace a useful persisted admin configuration with a malformed
+      // or unexpectedly empty response.
+      if (limits.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_cacheKey, jsonEncode(limits));
+      }
       return limits;
     } catch (_) {
       // Backend unavailable — use cached or default
@@ -61,7 +67,14 @@ class SpeedLimitService {
     final limits = await fetchSpeedLimits();
     final key = normalizeMode(mode);
     if (limits.containsKey(key)) return limits[key]!;
-    return AppConfig.defaultSpeedLimit;
+    return getCachedLimitForMode(mode);
+  }
+
+  /// Reads the persisted admin value without waiting for the network. This is
+  /// used to populate the map as soon as a customer selects a vehicle.
+  static Future<double> getCachedLimitForMode(String mode) async {
+    final limits = await _getCachedLimits();
+    return limits[normalizeMode(mode)] ?? AppConfig.defaultSpeedLimit;
   }
 
   /// Admin: update speed limit for a vehicle type via backend.
@@ -84,12 +97,18 @@ class SpeedLimitService {
       final cached = prefs.getString(_cacheKey);
       if (cached != null) {
         final decoded = jsonDecode(cached) as Map<String, dynamic>;
-        return decoded.map(
-          (k, v) => MapEntry(normalizeMode(k), _number(v) ?? 0),
-        );
+        final limits = <String, double>{};
+        for (final entry in decoded.entries) {
+          final value = _number(entry.value);
+          if (_valid(value)) limits[normalizeMode(entry.key)] = value!;
+        }
+        if (limits.isNotEmpty) return limits;
       }
     } catch (_) {}
     // Fall back to config defaults
-    return Map.from(AppConfig.speedLimits);
+    return {
+      for (final entry in AppConfig.speedLimits.entries)
+        normalizeMode(entry.key): entry.value,
+    };
   }
 }

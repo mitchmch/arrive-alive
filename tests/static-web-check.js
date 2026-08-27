@@ -29,7 +29,7 @@ assert.match(accessHero, /Drive aware\.<br>Arrive safe\./, 'The landing headline
 assert.doesNotMatch(accessHero, /<p\b/, 'The landing description must be removed');
 assert.doesNotMatch(html, /Road awareness ready/, 'The under-title route status must be removed');
 
-for (const icon of ['play', 'navigation', 'hazard', 'report']) {
+for (const icon of ['play', 'speedometer', 'navigation', 'hazard', 'alert', 'confirm', 'report', 'profile']) {
   assert.match(
     html,
     new RegExp(`${icon}:'<`),
@@ -40,10 +40,13 @@ assert.match(html, /guide-progress-step/, 'Guide progress must use icons');
 assert.match(html, /Step \$\{index\+1\}: \$\{item\.title\}/, 'Guide progress must retain accessible labels');
 assert.match(
   html,
-  /<span class="sr-only" id="guideStepLabel"[^>]*>Step 1 of 4<\/span>/,
+  /<span class="sr-only" id="guideStepLabel"[^>]*>Step 1 of 8<\/span>/,
   'The numeric step label must remain available to assistive technology only',
 );
 assert.doesNotMatch(html, /id="guideStepNumber"/, 'The numeric guide card indicator must be removed');
+for (const guideCopy of ['administrator-synced limit', 'speedometer', 'speaker icon', 'hazard triangle', '800 m', '500 m', 'Still there or Not there', 'person icon']) {
+  assert.ok(html.includes(guideCopy), `The expanded guide must explain ${guideCopy}`);
+}
 
 assert.doesNotMatch(html, /pk\.eyJ[A-Za-z0-9._-]+/, 'The web bundle must not embed a Mapbox token');
 assert.match(
@@ -84,6 +87,14 @@ assert.match(html, /accept="image\/jpeg,image\/png,image\/webp"/, 'Profile photo
 assert.match(html, /file\.size>1024\*1024/, 'Profile photos must be limited to 1 MB');
 assert.match(html, /id="journeyHistory"/, 'Profile must include personal journey history');
 assert.match(html, /ownerId:session\?`user-\$\{session\.phone\}`:null/, 'Saved journeys must carry an owner ID');
+assert.match(html, /JOURNEY_PREF_STORAGE_KEY='arrive-alive-journey-preferences-v1'/, 'Journey mode preferences must persist safely');
+assert.match(html, /Limit \$\{getAdminSpeedLimit\(m\.id\)\} km\/h/, 'Wizard mode cards must use admin-synced limits');
+assert.match(html, /if\(currentScreen==='journey'\|\|journeyActive\|\|recording\)return;/, 'Sync refreshes must not change an opened journey limit');
+assert.match(html, /function startJourney\(\)\{\s*\/\/[\s\S]*?journey\.limit=getAdminSpeedLimit\(journey\.mode\);/, 'A journey must freeze the current mode limit when opened');
+assert.match(html, /hazardAlertTracker=ArriveAliveHazardAlerts\.createTracker\(\[800,500\]\)/, 'Hazard alerts must track 800 m and 500 m stages');
+assert.match(html, /buzzer\(\);\s*vibrate\(\);\s*speak\(/, 'Hazard alerts must buzz, vibrate and speak');
+assert.match(html, /loadPublicHazards\(\)/, 'Guests must load sanitized active hazards');
+assert.match(html, /Sign in to confirm community hazards/, 'Remote hazard writes must require authentication');
 
 assert.match(html, /id="screen-admin"[^>]*data-testid="screen-admin"/, 'A stable admin screen must exist');
 assert.match(html, /name==='admin'&&!isAdminAccessAllowed\(\)/, 'Admin navigation must enforce the admin role');

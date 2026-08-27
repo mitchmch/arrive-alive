@@ -86,5 +86,130 @@ void main() {
       expect(parsed.confirmationCount, 4);
       expect(parsed.isActive, isTrue);
     });
+
+    test('public incident parsing discards reporter identity', () {
+      final parsed = Incident.fromPublicJson({
+        'id': 'opaque-hazard-id',
+        'remoteId': 13,
+        'type': 'pothole',
+        'lat': 3.848,
+        'lng': 11.5021,
+        'updatedAt': '2026-08-26T05:00:00Z',
+        'stillThere': 4,
+        'notThere': 1,
+        'vehicleReg': 'PRIVATE',
+        'driverName': 'Private Person',
+      });
+
+      expect(parsed.id, 13);
+      expect(parsed.confirmationCount, 4);
+      expect(parsed.notThereCount, 1);
+      expect(parsed.vehicleReg, isEmpty);
+      expect(parsed.driverName, isEmpty);
+    });
+  });
+
+  group('journey hazard alerts', () {
+    test('emits one 800 m and one 500 m alert per hazard', () {
+      final tracker = HazardAlertTracker();
+
+      expect(
+        tracker.observe(
+          incidentId: 20,
+          distanceMeters: 900,
+          accuracyMeters: 5,
+        ),
+        isEmpty,
+      );
+      expect(
+        tracker
+            .observe(
+              incidentId: 20,
+              distanceMeters: 790,
+              accuracyMeters: 5,
+            )
+            .map((alert) => alert.thresholdMeters),
+        [800],
+      );
+      expect(
+        tracker
+            .observe(
+              incidentId: 20,
+              distanceMeters: 490,
+              accuracyMeters: 5,
+            )
+            .map((alert) => alert.thresholdMeters),
+        [500],
+      );
+      expect(
+        tracker.observe(
+          incidentId: 20,
+          distanceMeters: 450,
+          accuracyMeters: 5,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('rejects inaccurate readings and confirms large GPS jumps', () {
+      final tracker = HazardAlertTracker();
+      tracker.observe(
+        incidentId: 21,
+        distanceMeters: 1000,
+        accuracyMeters: 5,
+      );
+
+      expect(
+        tracker.observe(
+          incidentId: 21,
+          distanceMeters: 400,
+          accuracyMeters: 120,
+        ),
+        isEmpty,
+      );
+      expect(
+        tracker.observe(
+          incidentId: 21,
+          distanceMeters: 400,
+          accuracyMeters: 5,
+        ),
+        isEmpty,
+      );
+      expect(
+        tracker
+            .observe(
+              incidentId: 21,
+              distanceMeters: 390,
+              accuracyMeters: 5,
+            )
+            .map((alert) => alert.thresholdMeters),
+        [800, 500],
+      );
+    });
+
+    test('reset starts a new journey alert lifecycle', () {
+      final tracker = HazardAlertTracker();
+      expect(
+        tracker
+            .observe(
+              incidentId: 22,
+              distanceMeters: 490,
+              accuracyMeters: 5,
+            )
+            .map((alert) => alert.thresholdMeters),
+        [800, 500],
+      );
+      tracker.reset();
+      expect(
+        tracker
+            .observe(
+              incidentId: 22,
+              distanceMeters: 490,
+              accuracyMeters: 5,
+            )
+            .map((alert) => alert.thresholdMeters),
+        [800, 500],
+      );
+    });
   });
 }

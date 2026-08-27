@@ -17,7 +17,7 @@ Supabase Edge Function secrets/runtime:
 ```text
 SUPABASE_URL=https://PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...             # server-side Edge secret only
-APP_ALLOWED_ORIGINS=https://arrive-alive-virid.vercel.app,https://cp.arrivealive.app
+APP_ALLOWED_ORIGINS=https://arrive-alive-virid.vercel.app,https://arrivealive.app,https://cp.arrivealive.app
 APP_SESSION_TTL_DAYS=30                   # optional, clamped to 1-90
 OPENAI_API_KEY=...                        # optional; server-side summaries only
 OPENAI_SUMMARY_MODEL=gpt-5-mini           # optional
@@ -37,7 +37,7 @@ the source default and can still be overridden):
 flutter run --dart-define=API_BASE_URL=https://otbbyvdhqbnjvswrwzft.supabase.co/functions/v1/app-api
 ```
 
-Web direct authentication uses the public Edge Function URL in the `arrive-alive-api-url` meta tag in `index.html`. The production Vercel hostname and planned `cp.arrivealive.app` control-panel hostname are safe default CORS origins; configure `APP_ALLOWED_ORIGINS` when adding more production hostnames. The URL is an endpoint, not a secret. Do not place `SUPABASE_SERVICE_ROLE_KEY`, an anon key, or an administrator credential in web/Flutter code.
+Web direct authentication uses the public Edge Function URL in the `arrive-alive-api-url` meta tag in `index.html`. The production Vercel hostname, `arrivealive.app` main-app hostname, and `cp.arrivealive.app` control-panel hostname are safe default CORS origins; configure `APP_ALLOWED_ORIGINS` when adding more production hostnames. The URL is an endpoint, not a secret. Do not place `SUPABASE_SERVICE_ROLE_KEY`, an anon key, or an administrator credential in web/Flutter code.
 
 ## Setup sequence (operator-run, not performed here)
 
@@ -60,7 +60,7 @@ Profile photos are private, limited to JPEG/PNG/WebP and 2 MB, stored under a pe
 
 Public before custom session authentication: `GET /health`, `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/reset-pin`, and read-only `GET /api/public-reports/:slug`.
 
-Authenticated: profile/logout, `/api/sync`, journeys and atomic safety completion, Speed Board, agency rollups, speed reports, notifications, incidents/confirmation, violations, agencies, and speed limits. Administrative: users, stats/overview, violation moderation/reports, speed-limit settings, rollup execution, public report publishing, and `/api/admin/sync-health`. Ownership is enforced on personal journeys, samples, and violations. Apart from a single slug-addressed sanitized snapshot, public-looking data routes still require a valid app session to limit anonymous bulk access.
+Public reads are limited to slug-addressed sanitized agency-report snapshots and the sanitized, active-only `/api/public-hazards` feed. The hazard feed exposes only an opaque/stable ID, bounded type and label, cleaned description, validated rounded coordinates, bounded confirmation counts, and timestamps; it omits reporter, driver, and vehicle identity. Authenticated routes include profile/logout, `/api/sync`, journeys and atomic safety completion, Speed Board, agency rollups, speed reports, notifications, incident creation/confirmation, violations, agencies, and speed limits. Administrative routes include users, stats/overview, violation moderation/reports, speed-limit settings, rollup execution, public report publishing, and `/api/admin/sync-health`. Ownership is enforced on personal journeys, samples, and violations.
 
 ## Deterministic safety intelligence
 
@@ -125,6 +125,8 @@ node --check api/sync.js
 node --check web-repository.js
 node tests/repository-check.js
 node tests/sync-api-check.js
+node tests/hazards-api-check.js
+node tests/hazard-alerts-check.js
 deno test --no-config supabase/functions/app-api/helpers_test.ts
 
 dart format --set-exit-if-changed flutter_app/lib flutter_app/test

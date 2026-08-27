@@ -23,7 +23,7 @@ class LocalDatabase {
 
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: (db, version) async {
         // Journeys table — localId is primary, remoteId is the server-assigned ID
         await db.execute('''
@@ -38,6 +38,9 @@ class LocalDatabase {
             driverName TEXT,
             passengerCount INTEGER DEFAULT 1,
             agencyId INTEGER,
+            frozenSpeedLimit REAL NOT NULL,
+            speedLimitMode TEXT NOT NULL,
+            speedLimitSelectedAt TEXT NOT NULL,
             startTime TEXT NOT NULL,
             endTime TEXT,
             status TEXT DEFAULT 'active',
@@ -229,6 +232,29 @@ class LocalDatabase {
           await db.execute(
             'CREATE INDEX idx_speed_samples_journey '
             'ON speed_samples(journeyLocalId, recordedAt)',
+          );
+        }
+        if (oldVersion < 5) {
+          await db.execute(
+            'ALTER TABLE journeys ADD COLUMN frozenSpeedLimit REAL',
+          );
+          await db.execute(
+            'ALTER TABLE journeys ADD COLUMN speedLimitMode TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE journeys ADD COLUMN speedLimitSelectedAt TEXT',
+          );
+          await db.execute(
+            'UPDATE journeys SET frozenSpeedLimit = 70 '
+            'WHERE frozenSpeedLimit IS NULL',
+          );
+          await db.execute(
+            'UPDATE journeys SET speedLimitMode = mode '
+            'WHERE speedLimitMode IS NULL',
+          );
+          await db.execute(
+            'UPDATE journeys SET speedLimitSelectedAt = startTime '
+            'WHERE speedLimitSelectedAt IS NULL',
           );
         }
       },

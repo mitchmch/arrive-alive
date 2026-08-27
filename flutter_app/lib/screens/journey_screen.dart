@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -48,7 +49,9 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   bool _isEndingJourney = false;
   Set<Marker> _hazardMarkers = {};
   LatLng? _currentLocation;
-  final Set<int> _warnedIncidentIds = {};
+  final HazardAlertTracker _hazardAlertTracker = HazardAlertTracker();
+  final List<HazardProximityAlert> _pendingHazardAlerts = [];
+  bool _processingHazardAlerts = false;
   bool _hazardSheetOpen = false;
   bool _allowPop = false;
 
@@ -64,7 +67,10 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
     // Guests start the same polling lifecycle as registered users.
     ref.read(hazardProvider.notifier).startPolling();
     _initLocation();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _showAgencyNotices());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(journeyProvider.notifier).refreshSpeedLimit();
+      _showAgencyNotices();
+    });
   }
 
   Future<void> _showAgencyNotices() async {
@@ -206,20 +212,55 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
     }
     final nearby = ref
         .read(hazardProvider.notifier)
-        .incidentsNear(location, radiusMeters: 750)
-        .where((incident) => !_warnedIncidentIds.contains(incident.id))
-        .toList();
+        .incidentsNear(location, radiusMeters: 850);
     if (nearby.isEmpty) return;
 
-    final incident = nearby.first;
-    _warnedIncidentIds.add(incident.id);
-    final distance = incidentDistanceMeters(location, incident).round();
-    TtsService().speak(
-      '${HazardColors.labelForType(incident.type)} ahead in about $distance metres.',
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _showIncidentDetails(incident, isWarning: true);
-    });
+    for (final incident in nearby) {
+      _pendingHazardAlerts.addAll(
+        _hazardAlertTracker.observe(
+          incidentId: incident.id,
+          distanceMeters: incidentDistanceMeters(location, incident),
+          accuracyMeters: journey.currentAccuracy,
+        ),
+      );
+    }
+    _processHazardAlerts();
+  }
+
+  Future<void> _processHazardAlerts() async {
+    if (_processingHazardAlerts) return;
+    _processingHazardAlerts = true;
+    try {
+      while (mounted && _pendingHazardAlerts.isNotEmpty) {
+        final alert = _pendingHazardAlerts.removeAt(0);
+        final incident =
+            ref.read(hazardProvider.notifier).incidentById(alert.incidentId);
+        if (incident == null || !incident.isActive) continue;
+        final label = HazardColors.labelForType(incident.type);
+        if (alert.thresholdMeters == 800) {
+          await TtsService().speak('$label ahead in about 800 metres.');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Text('$label ahead • 800 m'),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+        } else {
+          await TtsService().speak('$label ahead in about 500 metres.');
+          if (!mounted) return;
+          await _showIncidentDetails(
+            incident,
+            isWarning: true,
+            confirmationAlert: true,
+          );
+        }
+      }
+    } finally {
+      _processingHazardAlerts = false;
+    }
   }
 
   void _fitRouteToBounds(List<LatLng> points) {
@@ -385,6 +426,10 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
 
     // Listen to journey state changes
     ref.listen<JourneyState>(journeyProvider, (prev, next) {
+      if (next.isRecording && prev?.isRecording != true) {
+        _hazardAlertTracker.reset();
+        _pendingHazardAlerts.clear();
+      }
       if (next.path.isNotEmpty && (prev?.path.length ?? 0) < next.path.length) {
         final last = next.path.last;
         _updateMap(last['lat']!, last['lng']!);
@@ -793,14 +838,20 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final auth = ref.read(authProvider);
-                      await ref
-                          .read(journeyProvider.notifier)
-                          .startRecording(auth.user?.id);
-                    },
+                    onPressed: journey.isSpeedLimitLoading
+                        ? null
+                        : () async {
+                            final auth = ref.read(authProvider);
+                            await ref
+                                .read(journeyProvider.notifier)
+                                .startRecording(auth.user?.id);
+                          },
                     icon: const Icon(Icons.play_arrow),
-                    label: const Text('Start Recording'),
+                    label: Text(
+                      journey.isSpeedLimitLoading
+                          ? 'Loading speed limit…'
+                          : 'Start Recording',
+                    ),
                   ),
                 )
               else
@@ -944,9 +995,14 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   Future<void> _showIncidentDetails(
     Incident incident, {
     bool isWarning = false,
+    bool confirmationAlert = false,
   }) async {
     if (_hazardSheetOpen) return;
     _hazardSheetOpen = true;
+    if (confirmationAlert) {
+      SystemSound.play(SystemSoundType.alert);
+      HapticFeedback.heavyImpact();
+    }
     final color = Color(HazardColors.colorForType(incident.type));
     final label = HazardColors.labelForType(incident.type);
     final location = _currentLocation;
