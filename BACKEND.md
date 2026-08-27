@@ -158,3 +158,17 @@ Operator steps:
 No external deployment was performed. Until the migration and Edge Function
 are deployed together, publishing fails visibly and the client does not create
 a misleading local-only public URL.
+# Cloud navigation voice
+
+The web and Flutter clients use `POST https://arrivealive.app/api/voice` for
+short navigation and hazard instructions. The Vercel function keeps the
+ElevenLabs credential server-side, limits text to 220 characters, applies a
+per-client request window, and returns low-bandwidth MP3 audio. Configure:
+
+- `ELEVENLABS_API_KEY` as a production secret.
+- `ELEVENLABS_VOICE_ID` only to override the default African English voice
+  (`4bSnEy0K5TXdv7EEYf9t`).
+
+Clients automatically fall back to the existing device text-to-speech engine
+when the cloud voice is unconfigured, unavailable, times out, or cannot play.
+No ElevenLabs credential is included in either client bundle.

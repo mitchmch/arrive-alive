@@ -39,6 +39,7 @@ dependencies:
 
   # Text-to-speech for voice navigation
   flutter_tts: ^4.0.2
+  audioplayers: ^6.1.0
 
   # UI & Utilities
   google_fonts: ^6.1.0

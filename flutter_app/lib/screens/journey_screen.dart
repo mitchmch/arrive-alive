@@ -18,11 +18,13 @@ import '../models/agency_notice.dart';
 import '../models/incident.dart';
 import '../services/location_service.dart';
 import '../services/tts_service.dart';
+import '../services/speed_breach_alert_service.dart';
 import '../widgets/speedometer_widget.dart';
 import '../widgets/navigation_overlay.dart';
 import '../widgets/hazard_map.dart';
 import '../widgets/mapbox_map_widget.dart';
 import '../widgets/first_launch_guide.dart';
+import '../widgets/speed_breach_report_control.dart';
 import 'access_screen.dart';
 import 'report_screen.dart';
 import 'scoreboard_screen.dart';
@@ -54,6 +56,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   bool _processingHazardAlerts = false;
   bool _hazardSheetOpen = false;
   bool _allowPop = false;
+  final SpeedBreachAlertService _speedBreachAlert = SpeedBreachAlertService();
 
   @override
   void initState() {
@@ -342,6 +345,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
         ),
       );
       if (shouldLeave != true) return;
+      _speedBreachAlert.stop();
       await ref.read(journeyProvider.notifier).stopRecording();
       if (!mounted) return;
       setState(() => _allowPop = true);
@@ -372,6 +376,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   Future<void> _endJourney() async {
     if (_isEndingJourney) return;
     setState(() => _isEndingJourney = true);
+    _speedBreachAlert.stop();
     try {
       final summary = await ref.read(journeyProvider.notifier).stopRecording();
       if (!mounted) return;
@@ -419,6 +424,23 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
     }
   }
 
+  Future<void> _reportSpeedBreach() async {
+    final recorded =
+        await ref.read(journeyProvider.notifier).reportCurrentSpeedBreach();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            recorded
+                ? 'Speed breach report saved.'
+                : 'Could not save this speed breach report.',
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final journey = ref.watch(journeyProvider);
@@ -430,6 +452,10 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
         _hazardAlertTracker.reset();
         _pendingHazardAlerts.clear();
       }
+      _speedBreachAlert.update(
+        isRecording: next.isRecording,
+        isViolating: next.isViolating,
+      );
       if (next.path.isNotEmpty && (prev?.path.length ?? 0) < next.path.length) {
         final last = next.path.last;
         _updateMap(last['lat']!, last['lng']!);
@@ -541,6 +567,22 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
                   ),
                 ),
               ),
+
+            // Explicit breach evidence control. It remains grey below the
+            // journey's frozen limit, turns red during a breach, and displays
+            // a durable reported state until speed returns below the limit.
+            Positioned(
+              right: 16,
+              bottom: nav.isNavigating ? 224 : 188,
+              child: SafeArea(
+                top: false,
+                child: SpeedBreachReportControl(
+                  isViolating: journey.isRecording && journey.isViolating,
+                  isReported: journey.isBreachReported,
+                  onReport: _reportSpeedBreach,
+                ),
+              ),
+            ),
 
             // Map controls overlay (right side)
             if (_showMap && _mapReady)
@@ -844,7 +886,11 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
                             final auth = ref.read(authProvider);
                             await ref
                                 .read(journeyProvider.notifier)
-                                .startRecording(auth.user?.id);
+                                .startRecording(
+                                  auth.user?.isGuest == false
+                                      ? auth.user?.id
+                                      : null,
+                                );
                           },
                     icon: const Icon(Icons.play_arrow),
                     label: Text(
@@ -1220,6 +1266,7 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
   void dispose() {
     // Stop hazard polling when leaving the screen
     ref.read(hazardProvider.notifier).stopPolling();
+    _speedBreachAlert.dispose();
     super.dispose();
   }
 }

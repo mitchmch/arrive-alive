@@ -23,7 +23,7 @@ void main() {
       ),
     );
 
-    expect(appFeatureGuideItems, hasLength(12));
+    expect(appFeatureGuideItems, hasLength(13));
     expect(
       find.descendant(
         of: find.byKey(const Key('guide-feature-registry')),
@@ -43,6 +43,22 @@ void main() {
 
     expect(find.text('Navigation'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  test(
+      'guide uses distinct icon colours and documents voice fallback/reporting',
+      () {
+    final colors = appFeatureGuideItems.map((item) => item.color).toSet();
+    final voice =
+        appFeatureGuideItems.singleWhere((item) => item.id == 'voice');
+    final report = appFeatureGuideItems
+        .singleWhere((item) => item.id == 'speed-breach-report');
+
+    expect(colors, hasLength(appFeatureGuideItems.length));
+    expect(voice.body, contains('ElevenLabs'));
+    expect(voice.body, contains('device voice'));
+    expect(report.body, contains('activates automatically'));
+    expect(report.body, contains('Reported'));
   });
 
   test('light and dark themes share the blue family and distinct surfaces', () {

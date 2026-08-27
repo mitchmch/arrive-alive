@@ -7,12 +7,14 @@ class AppFeatureGuideItem {
   const AppFeatureGuideItem({
     required this.id,
     required this.icon,
+    required this.color,
     required this.title,
     required this.body,
   });
 
   final String id;
   final IconData icon;
+  final Color color;
   final String title;
   final String body;
 }
@@ -25,6 +27,7 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'start',
     icon: Icons.play_circle_outline,
+    color: Color(0xFF1565C0),
     title: 'Start and record',
     body:
         'Tap Start Recording only when you are ready. Your live speed and journey evidence stay together.',
@@ -32,6 +35,7 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'vehicle-limit',
     icon: Icons.signpost_outlined,
+    color: Color(0xFFE65100),
     title: 'Vehicle speed limit',
     body:
         'The map loads the admin-set limit for your selected car, bus, lorry, or bike before recording and keeps it fixed for that journey.',
@@ -39,6 +43,7 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'navigation',
     icon: Icons.navigation_outlined,
+    color: Color(0xFF6A1B9A),
     title: 'Navigation',
     body:
         'Set a destination while the map keeps route guidance, live speed, and the selected limit in view.',
@@ -46,13 +51,15 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'voice',
     icon: Icons.record_voice_over_outlined,
+    color: Color(0xFF00695C),
     title: 'Voice guidance',
     body:
-        'Listen for spoken navigation and shared-hazard warnings so you can keep your attention on the road.',
+        'ElevenLabs provides an African cloud voice for navigation and shared-hazard warnings. If cloud audio is unavailable, your device voice takes over automatically.',
   ),
   AppFeatureGuideItem(
     id: 'hazard-800',
     icon: Icons.radar_outlined,
+    color: Color(0xFF6D4C41),
     title: 'Shared hazard at 800 m',
     body:
         'Each shared active hazard gives one early warning at about 800 metres during a journey.',
@@ -60,6 +67,7 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'hazard-500',
     icon: Icons.warning_amber_rounded,
+    color: Color(0xFFB71C1C),
     title: 'Hazard check at 500 m',
     body:
         'At about 500 metres, a second alert opens the community confirmation for that hazard once.',
@@ -67,6 +75,7 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'haptic',
     icon: Icons.vibration,
+    color: Color(0xFF283593),
     title: 'Buzz and sound',
     body:
         'A sound and haptic buzz accompany the hazard confirmation so it is less likely to be missed.',
@@ -74,6 +83,7 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'confirmation',
     icon: Icons.fact_check_outlined,
+    color: Color(0xFF2E7D32),
     title: 'Confirm a hazard',
     body:
         'Choose Still there or Not there to keep shared hazard information useful for other road users.',
@@ -81,13 +91,23 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'report',
     icon: Icons.report_outlined,
+    color: Color(0xFF006064),
     title: 'Report',
     body:
         'Use Report to pin a road issue at its GPS location and share it with the community.',
   ),
   AppFeatureGuideItem(
+    id: 'speed-breach-report',
+    icon: Icons.speed,
+    color: Color(0xFFC62828),
+    title: 'Report a speed breach',
+    body:
+        'The bottom-right control activates automatically when speed exceeds the fixed journey limit. Tap the red control once to save a report; it stays marked Reported until speed drops below the limit.',
+  ),
+  AppFeatureGuideItem(
     id: 'map-speedometer',
     icon: Icons.speed_outlined,
+    color: Color(0xFF4527A0),
     title: 'Map and speedometer',
     body:
         'Switch between the live map and the full speedometer without interrupting your journey.',
@@ -95,6 +115,7 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'profile',
     icon: Icons.person_outline,
+    color: Color(0xFF880E4F),
     title: 'Profile',
     body:
         'Registered users can review their profile, journey history, settings, and this guide.',
@@ -102,6 +123,7 @@ const List<AppFeatureGuideItem> appFeatureGuideItems = [
   AppFeatureGuideItem(
     id: 'scoreboard',
     icon: Icons.leaderboard_outlined,
+    color: Color(0xFF795500),
     title: 'Speed Board',
     body:
         'Registered users can review published safety results and agency performance on the Speed Board.',
@@ -213,17 +235,22 @@ class _FirstLaunchGuideState extends State<FirstLaunchGuide> {
                             width: 38,
                             height: 38,
                             decoration: BoxDecoration(
-                              color: index == _step
-                                  ? colors.primaryContainer
-                                  : colors.surfaceContainerHighest,
+                              color: appFeatureGuideItems[index]
+                                  .color
+                                  .withValues(
+                                      alpha: index == _step ? 0.22 : 0.12),
+                              border: Border.all(
+                                color: index == _step
+                                    ? appFeatureGuideItems[index].color
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               appFeatureGuideItems[index].icon,
                               size: 21,
-                              color: index == _step
-                                  ? colors.onPrimaryContainer
-                                  : colors.onSurfaceVariant,
+                              color: appFeatureGuideItems[index].color,
                             ),
                           ),
                         ),
@@ -237,7 +264,7 @@ class _FirstLaunchGuideState extends State<FirstLaunchGuide> {
                 height: 56,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: colors.primaryContainer,
+                  color: step.color.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Semantics(
@@ -246,7 +273,7 @@ class _FirstLaunchGuideState extends State<FirstLaunchGuide> {
                   child: ExcludeSemantics(
                     child: Icon(
                       step.icon,
-                      color: colors.onPrimaryContainer,
+                      color: step.color,
                       size: 30,
                     ),
                   ),

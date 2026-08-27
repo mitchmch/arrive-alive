@@ -248,6 +248,7 @@ class SyncService {
     required double lng,
     int reportCount = 1,
     ViolationEpisode? episode,
+    String source = 'automatic_episode',
   }) async {
     final localId = _uuid.v4();
     final now = DateTime.now().toIso8601String();
@@ -268,6 +269,7 @@ class SyncService {
       'episodeStartedAt': episode?.startedAt.toUtc().toIso8601String(),
       'episodeEndedAt': episode?.endedAt.toUtc().toIso8601String(),
       'sampleCount': episode?.sampleCount ?? reportCount,
+      'source': source,
       'timestamp': now,
       'synced': 0,
       'updatedAt': now,
@@ -278,6 +280,80 @@ class SyncService {
     // the underlying samples and the backend independently reconstructs the
     // authoritative episodes and classification.
     return localId;
+  }
+
+  /// Records a passenger/driver-confirmed speed breach as durable local
+  /// evidence. For authenticated agency journeys, the same stable report is
+  /// queued for the dedicated endpoint after the journey create resolves.
+  Future<String> createManualSpeedReportLocal({
+    required String journeyLocalId,
+    int? journeyRemoteId,
+    required int? userId,
+    required int? agencyId,
+    required String vehicleReg,
+    required String mode,
+    required double speed,
+    required double speedLimit,
+    required double lat,
+    required double lng,
+    required DateTime reportedAt,
+  }) async {
+    final reportId = await createViolationLocal(
+      journeyLocalId: journeyLocalId,
+      journeyRemoteId: journeyRemoteId,
+      vehicleReg: vehicleReg,
+      mode: mode,
+      agencyId: agencyId,
+      speed: speed,
+      speedLimit: speedLimit,
+      lat: lat,
+      lng: lng,
+      episode: ViolationEpisode(
+        startedAt: reportedAt,
+        endedAt: reportedAt,
+        peakSpeed: speed,
+        speedLimit: speedLimit,
+        latitude: lat,
+        longitude: lng,
+        sampleCount: 1,
+      ),
+      source: 'manual_speed_breach_control',
+    );
+
+    if (userId == null || agencyId == null) return reportId;
+
+    final body = {
+      'localId': reportId,
+      'journeyId': journeyRemoteId,
+      'userId': userId,
+      'agencyId': agencyId,
+      'vehicleReg': vehicleReg,
+      'mode': mode,
+      'speedKph': speed,
+      'speedLimitKph': speedLimit,
+      'latitude': lat,
+      'longitude': lng,
+      'reportedAt': reportedAt.toUtc().toIso8601String(),
+      'source': 'manual_speed_breach_control',
+    };
+    await _db.enqueueSync({
+      'operationId': 'create_speed_report:$reportId',
+      'operation': 'create_speed_report',
+      'endpoint': '/api/speed-reports',
+      'method': 'POST',
+      'body': jsonEncode(body),
+      'dependsOn':
+          journeyRemoteId == null ? 'create_journey:$journeyLocalId' : null,
+    });
+    _syncStatusController.add(SyncStatus.queued);
+    if (AppConfig.hasBackend) {
+      try {
+        if (await _connectivity.checkOnline()) syncAll();
+      } catch (_) {
+        // The report is already durable and remains queued for the next sync.
+      }
+    }
+    return reportId;
   }
 
   /// Create an incident — try API first, fall back to local cache queue
@@ -410,7 +486,8 @@ class SyncService {
             }
             final remoteId = journey!['remoteId'];
 
-            if (operation == 'create_violation') {
+            if (operation == 'create_violation' ||
+                operation == 'create_speed_report') {
               // Update the body with the resolved remoteId
               final body = jsonDecode(bodyStr) as Map<String, dynamic>;
               body['journeyId'] = remoteId;

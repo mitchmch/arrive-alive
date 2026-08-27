@@ -23,7 +23,7 @@ class LocalDatabase {
 
     return openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         // Journeys table — localId is primary, remoteId is the server-assigned ID
         await db.execute('''
@@ -74,6 +74,7 @@ class LocalDatabase {
             episodeStartedAt TEXT,
             episodeEndedAt TEXT,
             sampleCount INTEGER DEFAULT 1,
+            source TEXT NOT NULL DEFAULT 'automatic_episode',
             timestamp TEXT NOT NULL,
             synced INTEGER DEFAULT 0,
             updatedAt TEXT,
@@ -255,6 +256,12 @@ class LocalDatabase {
           await db.execute(
             'UPDATE journeys SET speedLimitSelectedAt = startTime '
             'WHERE speedLimitSelectedAt IS NULL',
+          );
+        }
+        if (oldVersion < 6) {
+          await db.execute(
+            "ALTER TABLE violations ADD COLUMN source TEXT NOT NULL "
+            "DEFAULT 'automatic_episode'",
           );
         }
       },

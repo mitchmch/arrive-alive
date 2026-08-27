@@ -29,7 +29,7 @@ assert.match(accessHero, /Drive aware\.<br>Arrive safe\./, 'The landing headline
 assert.doesNotMatch(accessHero, /<p\b/, 'The landing description must be removed');
 assert.doesNotMatch(html, /Road awareness ready/, 'The under-title route status must be removed');
 
-for (const icon of ['play', 'speedometer', 'navigation', 'hazard', 'alert', 'confirm', 'report', 'profile']) {
+for (const icon of ['play', 'speedometer', 'navigation', 'hazard', 'alert', 'confirm', 'breach', 'report', 'profile']) {
   assert.match(
     html,
     new RegExp(`${icon}:'<`),
@@ -40,13 +40,14 @@ assert.match(html, /guide-progress-step/, 'Guide progress must use icons');
 assert.match(html, /Step \$\{index\+1\}: \$\{item\.title\}/, 'Guide progress must retain accessible labels');
 assert.match(
   html,
-  /<span class="sr-only" id="guideStepLabel"[^>]*>Step 1 of 8<\/span>/,
+  /<span class="sr-only" id="guideStepLabel"[^>]*>Step 1 of 9<\/span>/,
   'The numeric step label must remain available to assistive technology only',
 );
 assert.doesNotMatch(html, /id="guideStepNumber"/, 'The numeric guide card indicator must be removed');
-for (const guideCopy of ['administrator-synced limit', 'speedometer', 'speaker icon', 'hazard triangle', '800 m', '500 m', 'Still there or Not there', 'person icon']) {
+for (const guideCopy of ['administrator-synced limit', 'speedometer', 'African voice', 'hazard triangle', '800 m', '500 m', 'Still there or Not there', 'bottom-right Report button', 'person icon']) {
   assert.ok(html.includes(guideCopy), `The expanded guide must explain ${guideCopy}`);
 }
+assert.match(html, /style="--guide-color:\$\{item\.color\}"/, 'Each guide icon must retain its feature colour');
 
 assert.doesNotMatch(html, /pk\.eyJ[A-Za-z0-9._-]+/, 'The web bundle must not embed a Mapbox token');
 assert.match(
@@ -139,6 +140,11 @@ assert.match(html, /speedKph:Math\.round\(liveSpeed\*10\)\/10/, 'Web telemetry m
 assert.match(html, /agencyId:journey\.agencyId/, 'Journey safety completion must preserve agency attribution');
 assert.match(html, /entries\.filter\(item=>item\.resultType==='violator'\)/, 'The speeding tab must exclude compliant journeys');
 assert.match(html, /\/api\/speed-reports/, 'Registered users must be able to submit corroborating speed evidence');
+assert.match(html, /src="web-voice\.js"/, 'Cloud voice must use the tested browser controller');
+assert.match(html, /src="web-speed-breach\.js"/, 'Speed breach state must use the tested controller');
+assert.match(html, /data-testid="button-report-speed-breach"/, 'The map must expose the automatic speed-breach report button');
+assert.match(html, /speedBreachController\.update\(violating\)/, 'Live telemetry must drive the speed-breach control');
+assert.match(html, /speedBreachController\.reset\(\)/, 'Stopping a journey must reset the breach control and alarm');
 assert.match(html, /cannot create or change a violation by itself/, 'The report form must explain the telemetry safeguard');
 assert.match(html, /data-testid="button-agency-recompute"/, 'Administrators must recompute evidence rather than manually assigning trust');
 assert.doesNotMatch(html, /function toggleAgencyTrusted/, 'Safety classifications must not be manually overridden in the client');

@@ -98,6 +98,7 @@ Create an API key and restrict it to your app's package name / bundle ID.
 ```bash
 flutter run \
   --dart-define=API_BASE_URL=http://10.0.2.2:5000 \
+  --dart-define=VOICE_API_URL=https://arrivealive.app/api/voice \
   --dart-define=MAPBOX_ACCESS_TOKEN=your_mapbox_pk_token \
   --dart-define=GOOGLE_MAPS_API_KEY=your_maps_key \
   --dart-define=GOOGLE_DIRECTIONS_API_KEY=your_directions_key
@@ -105,6 +106,8 @@ flutter run \
 
 > If MAPBOX_ACCESS_TOKEN is empty, the app falls back to Google Maps automatically.
 > You can also customize the Mapbox style with --dart-define=MAPBOX_STYLE_URI=mapbox://styles/mapbox/navigation-day-v1
+> `VOICE_API_URL` is optional and defaults to `https://arrivealive.app/api/voice`.
+> Voice-provider API keys belong on that server endpoint and must not be added to the app.
 
 ### 5. Android Configuration
 

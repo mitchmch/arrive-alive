@@ -14,6 +14,12 @@ import '../services/sync_service.dart';
 
 typedef SpeedLimitLoader = Future<double> Function(String mode);
 
+bool breachReportedForNextSample({
+  required bool isViolating,
+  required bool wasReported,
+}) =>
+    isViolating && wasReported;
+
 class JourneyState {
   final String? mode;
   final Map<String, dynamic> vehicleDetails;
@@ -22,6 +28,7 @@ class JourneyState {
   final String? driverName;
   final int passengerCount;
   final int? agencyId;
+  final int? userId;
   final String? journeyLocalId; // Local UUID for offline-first
   final int? journeyId; // Remote ID once synced
   final bool isRecording;
@@ -39,6 +46,7 @@ class JourneyState {
   final bool isSpeedLimitLoading;
   final DateTime? speedLimitSelectedAt;
   final int sampleCount;
+  final bool isBreachReported;
 
   JourneyState({
     this.mode,
@@ -48,6 +56,7 @@ class JourneyState {
     this.driverName,
     this.passengerCount = 1,
     this.agencyId,
+    this.userId,
     this.journeyLocalId,
     this.journeyId,
     this.isRecording = false,
@@ -65,6 +74,7 @@ class JourneyState {
     this.isSpeedLimitLoading = false,
     this.speedLimitSelectedAt,
     this.sampleCount = 0,
+    this.isBreachReported = false,
   });
 
   JourneyState copyWith({
@@ -75,6 +85,7 @@ class JourneyState {
     String? driverName,
     int? passengerCount,
     int? agencyId,
+    int? userId,
     String? journeyLocalId,
     int? journeyId,
     bool? isRecording,
@@ -92,6 +103,7 @@ class JourneyState {
     bool? isSpeedLimitLoading,
     DateTime? speedLimitSelectedAt,
     int? sampleCount,
+    bool? isBreachReported,
   }) =>
       JourneyState(
         mode: mode ?? this.mode,
@@ -101,6 +113,7 @@ class JourneyState {
         driverName: driverName ?? this.driverName,
         passengerCount: passengerCount ?? this.passengerCount,
         agencyId: agencyId ?? this.agencyId,
+        userId: userId ?? this.userId,
         journeyLocalId: journeyLocalId ?? this.journeyLocalId,
         journeyId: journeyId ?? this.journeyId,
         isRecording: isRecording ?? this.isRecording,
@@ -118,6 +131,7 @@ class JourneyState {
         isSpeedLimitLoading: isSpeedLimitLoading ?? this.isSpeedLimitLoading,
         speedLimitSelectedAt: speedLimitSelectedAt ?? this.speedLimitSelectedAt,
         sampleCount: sampleCount ?? this.sampleCount,
+        isBreachReported: isBreachReported ?? this.isBreachReported,
       );
 }
 
@@ -260,6 +274,7 @@ class JourneyController extends StateNotifier<JourneyState> {
 
     state = state.copyWith(
       journeyLocalId: localId,
+      userId: userId,
       isRecording: true,
       isMoving: false,
       currentSpeed: 0,
@@ -273,6 +288,7 @@ class JourneyController extends StateNotifier<JourneyState> {
       distance: 0,
       duration: Duration.zero,
       path: const [],
+      isBreachReported: false,
     );
 
     _startTime = DateTime.now();
@@ -376,6 +392,10 @@ class JourneyController extends StateNotifier<JourneyState> {
       distance: nextDistance,
       path: nextPath,
       isViolating: isViolating,
+      isBreachReported: breachReportedForNextSample(
+        isViolating: isViolating,
+        wasReported: state.isBreachReported,
+      ),
       violationCount: _evidenceTracker.episodeCount,
       sampleCount: state.sampleCount + 1,
     );
@@ -398,6 +418,43 @@ class JourneyController extends StateNotifier<JourneyState> {
         episode: episode,
       ),
     );
+  }
+
+  /// Persists one explicit report for the current continuous breach. Automatic
+  /// episode tracking continues independently and remains deterministic.
+  Future<bool> reportCurrentSpeedBreach() async {
+    final position = _lastPosition;
+    final journeyLocalId = state.journeyLocalId;
+    if (!state.isRecording ||
+        !state.isViolating ||
+        state.isBreachReported ||
+        position == null ||
+        journeyLocalId == null) {
+      return false;
+    }
+
+    state = state.copyWith(isBreachReported: true);
+    try {
+      await _syncService.createManualSpeedReportLocal(
+        journeyLocalId: journeyLocalId,
+        journeyRemoteId: state.journeyId,
+        userId: state.userId,
+        agencyId: state.agencyId,
+        vehicleReg: (state.vehicleDetails['reg'] ?? '').toString(),
+        mode: state.mode ?? 'car',
+        speed: state.currentSpeed,
+        speedLimit: state.speedLimit,
+        lat: position.latitude,
+        lng: position.longitude,
+        reportedAt: DateTime.now().toUtc(),
+      );
+      return true;
+    } catch (_) {
+      if (state.isViolating) {
+        state = state.copyWith(isBreachReported: false);
+      }
+      return false;
+    }
   }
 
   Future<JourneyEvidenceSummary> stopRecording() {

@@ -319,3 +319,16 @@ Reload the latest version of the application and clear any stale site cache. The
 - The repository attempts the Vercel sync function first and safely retains data locally when it is unavailable, but the included function uses ephemeral process memory only.
 - Browser-local data is scoped to that browser/profile and may be cleared by the user or browser.
 - The demo auth flow is client-side and is not a security boundary. Production requires server-verified sessions and authorization.
+# Voice guidance and speed-breach reporting
+
+- Navigation and hazard speech prefers the server-proxied ElevenLabs African
+  English voice and automatically falls back to native device speech.
+- The journey map keeps a bottom-right speed-report control grey and inactive
+  below the selected vehicle limit. It turns red during an active breach,
+  starts a repeating alarm and haptic pattern, and returns to grey immediately
+  after speed drops below the frozen journey limit.
+- One driver report can be recorded for each continuous breach. Authenticated
+  agency journeys submit corroborating evidence to `/api/speed-reports`; every
+  report also remains attached to the local journey evidence record.
+- Mapbox remains the preferred real-time map renderer and uses the MapLibre /
+  OpenStreetMap path only as a runtime fallback after the existing retry.

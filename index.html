@@ -390,6 +390,25 @@ ul{list-style:none}
 .fab svg{width:22px;height:22px}
 .fab.active{background:var(--aa-amber);color:#fff;border-color:var(--aa-amber-dark)}
 .fab.voice-on{background:var(--aa-success);color:#fff;border-color:var(--aa-success)}
+.speed-breach-fab{
+  position:relative;width:58px;height:58px;background:#e5e7eb;color:#667085;
+  border:2px solid #cbd0d8;box-shadow:0 6px 18px rgba(15,35,74,.18);
+  cursor:not-allowed;
+}
+.speed-breach-fab svg{width:25px;height:25px}
+.speed-breach-fab .speed-report-label{
+  position:absolute;left:50%;bottom:5px;transform:translateX(-50%);
+  font-size:8px;line-height:1;font-weight:900;letter-spacing:.06em;
+}
+.speed-breach-fab.is-breaching{
+  background:#c81e3a;color:#fff;border-color:#fff;cursor:pointer;
+  box-shadow:0 0 0 4px rgba(200,30,58,.2),0 8px 22px rgba(116,18,39,.34);
+  animation:speedReportPulse 1.1s ease-in-out infinite;
+}
+.speed-breach-fab.is-reported{background:#a5112b;animation:none;cursor:default}
+.speed-breach-fab:disabled{opacity:1}
+@keyframes speedReportPulse{50%{transform:scale(1.06);box-shadow:0 0 0 8px rgba(200,30,58,.09),0 8px 22px rgba(116,18,39,.34)}}
+@media (prefers-reduced-motion:reduce){.speed-breach-fab.is-breaching{animation:none}}
 
 /* === Red flash overlay === */
 .flash-overlay{
@@ -858,14 +877,16 @@ ul{list-style:none}
   content:"";position:absolute;left:8px;right:8px;bottom:5px;height:3px;border-radius:2px;background:var(--aa-divider);
 }
 .guide-progress-step svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.guide-progress-step.complete,.guide-progress-step.active{color:var(--aa-blue);border-color:rgba(67,97,238,.45)}
-.guide-progress-step.complete::after,.guide-progress-step.active::after{background:var(--aa-blue)}
-.guide-progress-step.active{background:rgba(67,97,238,.08);box-shadow:inset 0 0 0 1px rgba(67,97,238,.08)}
+.guide-progress-step{color:var(--guide-color,var(--aa-blue))}
+.guide-progress-step.complete,.guide-progress-step.active{border-color:color-mix(in srgb,var(--guide-color,var(--aa-blue)) 56%,white)}
+.guide-progress-step.complete::after,.guide-progress-step.active::after{background:var(--guide-color,var(--aa-blue))}
+.guide-progress-step.active{background:color-mix(in srgb,var(--guide-color,var(--aa-blue)) 11%,white);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--guide-color,var(--aa-blue)) 16%,transparent)}
 .guide-card{
   min-height:196px;padding:18px;border:1px solid var(--aa-border);border-radius:14px;background:var(--aa-surface);
 }
 .guide-step-icon{
-  width:38px;height:38px;color:var(--aa-blue);display:flex;align-items:center;justify-content:center;
+  width:44px;height:44px;color:var(--guide-color,var(--aa-blue));display:flex;align-items:center;justify-content:center;
+  border-radius:13px;background:color-mix(in srgb,var(--guide-color,var(--aa-blue)) 12%,white);
 }
 .guide-step-icon svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .guide-step-title{margin-top:9px;font-size:20px;line-height:1.2;font-weight:800}
@@ -1112,6 +1133,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
   .fab{width:44px;height:44px}
   .fab-profile{width:44px;min-width:44px;padding:0;border-radius:50%}
   .fab-profile span{display:none}
+  .speed-breach-fab{grid-column:2}
 }
 
 /* Short landscape devices: change vertical map controls into a compact toolbar. */
@@ -1435,6 +1457,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
         <button type="button" class="fab" id="fabReport" onclick="navigate('report',{preserveJourney:true})" title="Report" aria-label="Report incident" data-testid="button-map-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></button>
         <button type="button" class="fab" onclick="openGuide()" title="User guide" aria-label="Open user guide" data-testid="button-help-journey"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 114.3 1.5c-.9.8-2.1 1.2-2.1 2.8M12 17h.01"/></svg></button>
         <button type="button" class="fab" id="fabLogout" onclick="doLogout()" title="Sign Out" aria-label="Sign out" data-testid="button-map-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg></button>
+        <button type="button" class="fab speed-breach-fab" id="speedBreachButton" onclick="reportCurrentSpeedBreach()" title="Speed breach reporting activates above the limit" aria-label="Speed breach report inactive" aria-live="polite" disabled data-testid="button-report-speed-breach"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16a8 8 0 1116 0"/><path d="M12 16l4-5"/><path d="M7 20h10"/></svg><span class="speed-report-label">REPORT</span></button>
       </div>
 
       <!-- Nav search overlay -->
@@ -1755,7 +1778,7 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
       <div class="guide-head">
         <div>
           <div class="guide-eyebrow" aria-hidden="true">User guide</div>
-          <span class="sr-only" id="guideStepLabel" data-testid="guide-step-label">Step 1 of 8</span>
+          <span class="sr-only" id="guideStepLabel" data-testid="guide-step-label">Step 1 of 9</span>
           <h2 class="guide-title" id="guideTitle">Drive with live speed recording</h2>
         </div>
         <button type="button" class="guide-skip" onclick="closeGuide(true)" aria-label="Skip user guide" data-testid="button-guide-skip">Skip</button>
@@ -1792,6 +1815,8 @@ html,body{width:100%;height:100%;overscroll-behavior:none}
 
 <script src="web-repository.js"></script>
 <script src="web-hazard-alerts.js"></script>
+<script src="web-voice.js"></script>
+<script src="web-speed-breach.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script>
 /* ============================================================
@@ -2246,18 +2271,24 @@ function vibrate(){if(navigator.vibrate)try{navigator.vibrate(300)}catch(e){}}
 
 /* ---- Voice ---- */
 let voiceOn=true;
-function toggleVoice(){
-  voiceOn=!voiceOn;
-  $('fabVoice').classList.toggle('voice-on',voiceOn);
-  if(voiceOn)showToast('Voice guidance on');
-  else{window.speechSynthesis.cancel();showToast('Voice guidance off');}
-}
-function speak(text){
-  if(!voiceOn||!window.speechSynthesis)return;
+function speakNativeVoice(text){
+  if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
   u.rate=.95;u.pitch=1;u.volume=1;
   window.speechSynthesis.speak(u);
+}
+const voiceController=ArriveAliveVoice.createVoiceController({fallback:speakNativeVoice});
+function toggleVoice(){
+  voiceOn=!voiceOn;
+  $('fabVoice').classList.toggle('voice-on',voiceOn);
+  voiceController.setEnabled(voiceOn);
+  if(voiceOn)showToast('Voice guidance on');
+  else{voiceController.stop();window.speechSynthesis?.cancel();showToast('Voice guidance off');}
+}
+function speak(text){
+  if(!voiceOn)return;
+  voiceController.speak(text);
 }
 
 /* ---- First-visit guide ---- */
@@ -2269,6 +2300,7 @@ const GUIDE_STEPS=[
     title:'Vehicle & limit',
     heading:'Choose the right vehicle',
     icon:'play',
+    color:'#2563eb',
     copy:'Choose Car, Bus, Lorry or Motorbike. Each card shows the latest administrator-synced limit for that vehicle.',
     note:'Your choice persists. The displayed limit is frozen when that journey opens, so a mid-journey sync cannot change it.'
   },
@@ -2276,6 +2308,7 @@ const GUIDE_STEPS=[
     title:'Start & speed',
     heading:'Start live speed recording',
     icon:'speedometer',
+    color:'#d97706',
     copy:'On the map, Start records only after movement. The speedometer, limit badge, distance, duration and violations update together.',
     note:'Keep location access on; the map and speedometer stay at 0 while stationary.'
   },
@@ -2283,13 +2316,15 @@ const GUIDE_STEPS=[
     title:'Navigate & voice',
     heading:'Route with spoken guidance',
     icon:'navigation',
-    copy:'Tap Navigate, choose a destination and follow the route banner. Tap the speaker icon to turn voice guidance on or off.',
-    note:'Choosing a route never starts speed recording.'
+    color:'#7c3aed',
+    copy:'Tap Navigate, choose a destination and follow the route banner. Cloud guidance uses a clear African voice, with your device voice as the automatic fallback.',
+    note:'Tap the speaker icon to turn voice on or off. Choosing a route never starts speed recording.'
   },
   {
     title:'Hazard map',
     heading:'Show or hide active hazards',
     icon:'hazard',
+    color:'#0f766e',
     copy:'The hazard triangle toggles active community markers. Open a marker to read its type, location and latest confirmation.',
     note:'Active hazard locations are visible to guests; server updates require a signed-in account.'
   },
@@ -2297,6 +2332,7 @@ const GUIDE_STEPS=[
     title:'800 m alert',
     heading:'First hazard warning',
     icon:'alert',
+    color:'#b45309',
     copy:'At about 800 m, the app shows and speaks a hazard alert, buzzes and uses device vibration when supported.',
     note:'Each hazard triggers this stage only once per journey.'
   },
@@ -2304,13 +2340,23 @@ const GUIDE_STEPS=[
     title:'500 m confirm',
     heading:'Confirm closer hazards',
     icon:'confirm',
+    color:'#15803d',
     copy:'At about 500 m, a second buzz and alert asks Still there or Not there. GPS jumps across both distances are handled without duplicate alerts.',
     note:'Your confirmation keeps the community map current.'
+  },
+  {
+    title:'Speed breach',
+    heading:'Report an active speed breach',
+    icon:'breach',
+    color:'#c81e3a',
+    copy:'When live speed exceeds the selected vehicle limit, the bottom-right Report button turns red and an SOS-style alarm repeats.',
+    note:'Tap the red button once to record the observed speed. It returns grey and the alarm stops automatically when speed falls below the limit.'
   },
   {
     title:'Report',
     heading:'Report what you observe',
     icon:'report',
+    color:'#0369a1',
     copy:'Tap the report document icon, choose an incident, pin its location and submit. Signed-in reports become active map hazards.',
     note:'Use a precise location, a short description and only report what you observe.'
   },
@@ -2318,6 +2364,7 @@ const GUIDE_STEPS=[
     title:'Profile & board',
     heading:'Review your safety record',
     icon:'profile',
+    color:'#9333ea',
     copy:'The person icon opens Profile, journey history and the Speed Board for registered users. The question-mark icon reopens this guide.',
     note:'Administrators also manage persistent vehicle speed limits and synchronization health.'
   }
@@ -2329,6 +2376,7 @@ const GUIDE_ICONS={
   hazard:'<path d="M12 3L2.8 20h18.4L12 3z"/><path d="M12 9v4M12 17h.01"/>',
   alert:'<path d="M12 3L2.8 20h18.4L12 3z"/><path d="M12 8v5M12 17h.01"/>',
   confirm:'<path d="M4 12l5 5L20 6"/><circle cx="12" cy="12" r="10"/>',
+  breach:'<path d="M4 16a8 8 0 1116 0"/><path d="M12 16l4-5"/><path d="M7 20h10"/>',
   report:'<path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
   profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>'
 };
@@ -2353,6 +2401,7 @@ function renderGuideStep({playSound=false}={}){
   const step=GUIDE_STEPS[guideStep];
   $('guideStepLabel').textContent=`Step ${guideStep+1} of ${GUIDE_STEPS.length}`;
   $('guideStepIcon').innerHTML=guideIconSvg(step.icon);
+  $('guideStepIcon').style.setProperty('--guide-color',step.color);
   $('guideTitle').textContent=step.heading;
   $('guideStepTitle').textContent=step.title;
   $('guideCopy').textContent=step.copy;
@@ -2360,7 +2409,7 @@ function renderGuideStep({playSound=false}={}){
   $('guideProgress').innerHTML=GUIDE_STEPS.map((item,index)=>{
     const state=index===guideStep?'active':index<guideStep?'complete':'';
     const current=index===guideStep?' aria-current="step"':'';
-    return `<span class="guide-progress-step ${state}"${current}>${guideIconSvg(item.icon)}<span class="sr-only">Step ${index+1}: ${item.title}</span></span>`;
+    return `<span class="guide-progress-step ${state}" style="--guide-color:${item.color}"${current}>${guideIconSvg(item.icon)}<span class="sr-only">Step ${index+1}: ${item.title}</span></span>`;
   }).join('');
   $('guideProgress').setAttribute('aria-label',`Step ${guideStep+1} of ${GUIDE_STEPS.length}`);
   $('guideBack').hidden=guideStep===0;
@@ -2599,13 +2648,106 @@ let journeyActive=false,recording=false,violations=0,maxSpeed=0,distKm=0,durSec=
 let snappedRoutePosition=null,routeProgressMeters=0,offRouteFixes=0,lastRerouteAt=0,isRerouting=false,lastSpokenStepIdx=-1;
 let wasViolating=false;
 let userHeading=0;
-let speedSamples=[],lastJourneyReport=null;
+let speedSamples=[],manualSpeedReports=[],lastJourneyReport=null;
+let speedBreachAlarmTimer=null;
 const MOTION_THRESHOLD_KMH=3;
 const MAX_DERIVED_SPEED_KMH=220;
   const MAX_DERIVED_ACCURACY_M=65;
 const OFF_ROUTE_THRESHOLD_M=45;
 const OFF_ROUTE_FIXES_REQUIRED=3;
 const REROUTE_COOLDOWN_MS=15000;
+
+function playSpeedBreachAlarm(){
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    [0,0.22,0.44].forEach((offset,index)=>{
+      const oscillator=audioCtx.createOscillator(),gain=audioCtx.createGain();
+      oscillator.connect(gain);gain.connect(audioCtx.destination);
+      oscillator.type='sawtooth';
+      oscillator.frequency.value=index===1?880:660;
+      const start=audioCtx.currentTime+offset;
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(.15,start+.025);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+.17);
+      oscillator.start(start);oscillator.stop(start+.18);
+    });
+    if(navigator.vibrate)navigator.vibrate([160,80,160,80,280]);
+  }catch(error){}
+}
+function startSpeedBreachAlarm(){
+  if(speedBreachAlarmTimer)return;
+  playSpeedBreachAlarm();
+  speedBreachAlarmTimer=setInterval(playSpeedBreachAlarm,2200);
+}
+function stopSpeedBreachAlarm(){
+  if(speedBreachAlarmTimer)clearInterval(speedBreachAlarmTimer);
+  speedBreachAlarmTimer=null;
+  if(navigator.vibrate)try{navigator.vibrate(0)}catch(error){}
+}
+function renderSpeedBreachControl(state){
+  const button=$('speedBreachButton');
+  if(!button)return;
+  button.classList.toggle('is-breaching',state.active);
+  button.classList.toggle('is-reported',state.reported);
+  button.disabled=!state.active||state.reported;
+  const label=button.querySelector('.speed-report-label');
+  if(label)label.textContent=state.reported?'SENT':'REPORT';
+  button.setAttribute('aria-label',state.active
+    ?state.reported?'Speed breach reported':'Report current speed breach'
+    :'Speed breach report inactive');
+  button.title=state.active
+    ?state.reported?'Speed breach recorded for this event':'Report current speed breach'
+    :'Speed breach reporting activates above the limit';
+}
+const speedBreachController=ArriveAliveSpeedBreach.createController({
+  onChange:renderSpeedBreachControl,
+  onAlarmStart:startSpeedBreachAlarm,
+  onAlarmStop:stopSpeedBreachAlarm
+});
+
+async function reportCurrentSpeedBreach(){
+  const breach=speedBreachController.getState();
+  if(!recording||!journeyActive||!breach.active||breach.reported)return;
+  const observedAt=new Date().toISOString();
+  const stableId=`speed-report-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+  const report={
+    stableId,observedAt,
+    speedKph:Number(liveSpeed.toFixed(1)),
+    speedLimitKph:Number(journey.limit),
+    mode:journey.mode==='bike'?'motorbike':journey.mode,
+    agencyId:journey.agencyId||null,
+    vehicleFingerprint:String(journey.reg||'').trim().toUpperCase()||null,
+    latitude:Number(curPos.lat.toFixed(6)),
+    longitude:Number(curPos.lng.toFixed(6)),
+    source:'driver_speed_breach_button'
+  };
+  manualSpeedReports.push(report);
+  const latest=speedSamples.at(-1);
+  if(latest){
+    latest.userReported=true;
+    latest.userReportedAt=observedAt;
+    latest.reportStableId=stableId;
+  }
+  if(!speedBreachController.markReported())return;
+  const session=getAASession();
+  const numericAgencyId=Math.round(Number(journey.agencyId));
+  if(session?.token&&Number.isFinite(numericAgencyId)&&numericAgencyId>0){
+    try{
+      await callAppApi('/api/speed-reports',{
+        method:'POST',
+        token:session.token,
+        idempotencyKey:`speed-breach:${stableId}`,
+        body:{...report,agencyId:numericAgencyId}
+      });
+      showToast('Speed breach reported successfully');
+      return;
+    }catch(error){
+      console.warn('Speed breach report queued with journey',error);
+    }
+  }
+  showToast('Speed breach recorded successfully and saved with this journey');
+}
 
 function loadMapboxConfig(){
   if(mapboxConfigPromise)return mapboxConfigPromise;
@@ -3076,7 +3218,8 @@ function startJourney(){
   syncHazardMarkers();
   curPos={lat:routePts[0].lat,lng:routePts[0].lng};
   violations=0;maxSpeed=0;distKm=0;durSec=0;avgSum=0;avgCount=0;liveSpeed=0;wasViolating=false;
-  speedSamples=[];lastGeoFix=null;recordingStartedAt=0;
+  speedSamples=[];manualSpeedReports=[];lastGeoFix=null;recordingStartedAt=0;
+  speedBreachController.reset();
   navActive=false;
   $('recBtn').classList.remove('recording');
   $('recBtn2').classList.remove('recording');
@@ -3316,9 +3459,10 @@ function handleGpsPosition(position){
     map.easeTo({center:[displayPosition.lng,displayPosition.lat],bearing:userHeading,pitch:navActive?55:30,zoom:navActive?16:14,duration:400});
   }
 
-  const violating=isMoving&&liveSpeed>journey.limit+2;
+  const violating=isMoving&&liveSpeed>journey.limit;
   $('flashOverlay').classList.toggle('active',violating);
   $('speedLimitBadge').classList.toggle('over-limit',violating);
+  speedBreachController.update(violating);
   if(violating&&!wasViolating){
     buzzer();vibrate();violations++;
     $('statViol').textContent=violations;
@@ -3781,6 +3925,7 @@ function forceStationary(message){
   stopMotionTracking();
   liveSpeed=0;
   wasViolating=false;
+  speedBreachController.reset();
   $('flashOverlay').classList.remove('active');
   $('speedLimitBadge').classList.remove('over-limit');
   syncRecordingControls();
@@ -3824,7 +3969,8 @@ async function endJourney(message='Journey saved'){
       averageSpeedKmh:Math.round((avgCount?avgSum/avgCount:0)*10)/10,
       violations
     },
-    samples:speedSamples.slice()
+    samples:speedSamples.slice(),
+    manualSpeedReports:manualSpeedReports.slice()
   };
   window.__lastJourneyReport=lastJourneyReport;
   if(session)aaRepository.upsert('journeys',lastJourneyReport);
@@ -3850,6 +3996,7 @@ async function endJourney(message='Journey saved'){
   journeyActive=false;stopMotionTracking();
   liveSpeed=0;
   $('flashOverlay').classList.remove('active');wasViolating=false;
+  speedBreachController.reset();
   $('speedLimitBadge').classList.remove('over-limit');
   recording=false;
   hideHazardAlert();

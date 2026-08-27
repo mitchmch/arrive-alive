@@ -14,6 +14,13 @@ class AppConfig {
       apiBaseUrl.trim().isNotEmpty &&
       (apiBaseUrl.startsWith('https://') || apiBaseUrl.startsWith('http://'));
 
+  /// Public server-side text-to-speech proxy. The server owns all provider
+  /// credentials; the mobile client sends only text and language metadata.
+  static const String voiceApiUrl = String.fromEnvironment(
+    'VOICE_API_URL',
+    defaultValue: 'https://arrivealive.app/api/voice',
+  );
+
   // Mapbox access token (public pk. token) - get from https://account.mapbox.com/
   // Can also be overridden via --dart-define=MAPBOX_ACCESS_TOKEN=your_token
   static const String mapboxAccessToken = String.fromEnvironment(
